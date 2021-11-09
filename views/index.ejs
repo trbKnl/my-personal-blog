@@ -1,0 +1,55 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Niek de Schipper</title>
+    <link rel="stylesheet" href="css/bootstrap.min.css"/>
+    <link rel="icon" type="image/png" href="/siteicon.png">
+</head>
+<body>
+<div class="container">
+
+    <div class="row">
+        <div class="col-md-12">
+            <h1 class="mt-5 mb-3 border-bottom">Niek de Schipper homepage</h1>
+        </div>
+    </div>
+    <div class="row align-items-center">
+      <div class="col-md-4">
+          <img width="250px" src="icon.png" align="left">
+      </div>
+      <div class="col-md-4">
+          <p> I am a PhD Data Science, that likes to do stuff with computers. Feel free to check out my <a href="#blog">blog posts</a>, or send me an <a href="mailto: ncdeschipper@gmail.com">email</a>.</p>
+      </div>
+      <div class="col-md-4">
+             <ul>
+                 <li><a href="https://github.com/trbKnl/">Github</a></li>
+                 <li><a href="https://scholar.google.com/citations?user=PEuawIgAAAAJ&hl=en">Scholar</a></li>
+                 <li><a href="https://www.linkedin.com/in/niek-de-schipper/">Linkedin</a></li>
+                 <li><a href="https://turdify.niekdeschipper.com">Mess up your pictures</a></li>
+            </ul> 
+      </div>
+
+
+    <div class="row">
+        <div class="col-md-12">
+            <h1 class="mt-5 mb-3 border-bottom" id="blog">Blog</h1>
+        </div>
+    </div>
+    <% for (var key in metadata) { %>
+        <div class="card">
+            <div class="card-body">
+                <a href="<%= '/projects/'.concat(key) %>"><h5 class="card-title"><%= metadata[key].title %></h5></a>
+                <h6 class="card-subtitle mb-2 text-muted"><%= metadata[key].date %></h6>
+                <p class="card-text"><%= metadata[key].description %></p>
+            </div>
+        </div>
+    <% } %>
+
+
+</div>
+</body>
+</html>
+
+

@@ -1,0 +1,8 @@
+# Add metadata before packaging
+python3 ./readmetadata.py
+
+# Copy the qemu-arm-static over here so it can be compiled on my workstation
+cp /bin/qemu-arm-static .
+
+# Install the packages check if binfmt_misc support is running running
+systemctl status systemd-binfmt

@@ -1,0 +1,7 @@
+{
+    "tutorial.md": {"title": "Linux/Mac command line tutorial", "date": "2021-03-05", "description": "A short hands on tutorial to get you started on the command line"}, 
+    "cluster.md": {"title": "Raspberry Pi cluster with Kubernetes", "date": "2021-13-08", "description": "How to build your own Raspberry Pi cluster with Kubernetes"}, 
+    "nvim_python_repl.md": {"title": "Turn Neovim into a Python IDE", "date": "2021-11-09", "description": "A set of vim functions to send Python code to the interpreter"}, 
+    "production.md": {"title": "Machine learning in production", "date": "2021-13-08", "description": "An overview of the steps you have to take to put machine learning into production"}, 
+    "vim.md": {"title": "Getting into Vim", "date": "2021-03-05", "description": "How I started with Vim"}
+}
