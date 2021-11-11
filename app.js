@@ -1,9 +1,9 @@
 const express = require("express")
 const fs = require('fs');
 
+
 // custom routers 
 const projectRouter = require("./routes/projects")
-
 
 /* Start server here */
 const app = express();
@@ -11,15 +11,12 @@ const app = express();
 // enable ejs 
 app.set('view engine', 'ejs')
 
-//bootstrap css files
-app.use(express.static(__dirname + '/node_modules/bootstrap/dist/css'));
-
 // resources directory for images and such
+// bootstrap css file
 app.use(express.static(__dirname + '/resources'));
 
-
-// create a route for all the articles 
 app.use('/projects', projectRouter)
+
 
 // read in the metadata file to display the blog posts
 var metadata = JSON.parse(fs.readFileSync('blogmetadata.json', 'utf8'));
