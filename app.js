@@ -11,10 +11,11 @@ const app = express();
 // enable ejs 
 app.set('view engine', 'ejs')
 
+//bootstrap css files
+app.use(express.static(__dirname + '/node_modules/bootstrap/dist/css'));
+
 // resources directory for images and such
 app.use(express.static(__dirname + '/resources'));
-//bootstrap css files
-app.use(express.static(__dirname + '/node_modules/bootstrap/dist'));
 
 
 // create a route for all the articles 
