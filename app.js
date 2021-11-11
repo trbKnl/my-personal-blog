@@ -1,5 +1,6 @@
 const express = require("express")
-const fs = require('fs');
+var compression = require("compression")
+const fs = require("fs")
 
 
 // custom routers 
@@ -7,6 +8,9 @@ const projectRouter = require("./routes/projects")
 
 /* Start server here */
 const app = express();
+
+// Use compression
+app.use(compression());
 
 // enable ejs 
 app.set('view engine', 'ejs')

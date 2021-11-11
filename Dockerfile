@@ -18,6 +18,9 @@ RUN npm ci --only=production
 # Bundle app source
 COPY . .
 
+# set NODE_ENV
+ENV NODE_ENV=production
+
 EXPOSE 8080
 CMD [ "node", "app.js" ]
 
