@@ -11,7 +11,7 @@
 <div class="container">
 
     <div class="row">
-        <div class="col-md-12">
+        <div class="col-md-8 mx-auto">
             <h1 class="mt-5 mb-3 border-bottom">Niek de Schipper homepage</h1>
         </div>
     </div>
@@ -33,19 +33,23 @@
 
 
     <div class="row">
-        <div class="col-md-12">
+        <div class="col-md-8 mx-auto">
             <h1 class="mt-5 mb-3 border-bottom" id="blog">Blog</h1>
         </div>
     </div>
-    <% for (var key in metadata) { %>
-        <div class="card">
-            <div class="card-body">
-                <a href="<%= '/projects/'.concat(key) %>"><h5 class="card-title"><%= metadata[key].title %></h5></a>
-                <h6 class="card-subtitle mb-2 text-muted"><%= metadata[key].date %></h6>
-                <p class="card-text"><%= metadata[key].description %></p>
-            </div>
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <% for (var key in metadata) { %>
+                <div class="card">
+                    <div class="card-body">
+                        <a href="<%= '/projects/'.concat(key) %>"><h5 class="card-title"><%= metadata[key].title %></h5></a>
+                        <h6 class="card-subtitle mb-2 text-muted"><%= metadata[key].date %></h6>
+                        <p class="card-text"><%= metadata[key].description %></p>
+                    </div>
+                </div>
+            <% } %>
         </div>
-    <% } %>
+    </div>
 
 
 </div>
