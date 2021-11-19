@@ -8,9 +8,9 @@ description: An overview of the steps you have to take to put machine learning i
 td {
     padding:0 15px;
 }
-pre {
-    background-color: lightgray;
-}
+<! ---pre {  --->
+<! ---    background-color: lightgray; ---> 
+<! ---} ---> 
 </style>
 
 
@@ -20,6 +20,7 @@ pre {
 In this blog post I will outline the general steps you need to take to put your fresh code into production for everybody to enjoy. The goal of this blog post is to give you a general idea of what is needed to put a machine learning application into production. Although, I won't go into great detail, I believe it is very useful to have seen all the steps you need to take to get from: nothing to a working application. Once you know what steps you can to take, you can fill in all the details yourself.
 
 In this blog post I will discuss:
+
 - How I created an application by writing some code
 - How to create an API for the application with the python package FastAPI
 - How to containerize your application with Docker so you can distribute your application as a container
@@ -39,7 +40,7 @@ I started searching for: "face recognition in Python", and I found [face-recogni
 
 This is the function I ended up creating first, a function to detect faces in an image:
 
-```
+``` python
 def detect_face_locations(image_buf: bytes) -> list:
     """Detect faces that may or may not be in in an image buffer"""
 
@@ -61,7 +62,7 @@ I started writing the code and ended up with a function that works as follows:
 
 The function looks like this:
 
-```
+```python
 def turdify_image(image_buf: bytes) -> bytes:
     """Paste turd emoji over detected faces in an image"""
 
@@ -108,7 +109,7 @@ For the turdify application I started thinking about what my API should look lik
 
 I started writing the code for the API, and I ended up with:
 
-```
+```python
 @app.post("/turdify/")
 async def create_image(my_file: UploadFile = File(...)):
 
@@ -155,7 +156,7 @@ An example is helpful here. Let's make a simple python webserver that serves a h
 
 `index.html` can be any random html page you like, for example: `<h1>Does not matter at all</h1>`. Now that we have the code. Let's create a `Dockerfile` containing the instructions to build the container, all `Dockerfile`s look something like his:
 
-```
+```dockerfile
 # The image we want to use as our basis to install our code on
 FROM python:3.9-alpine
 

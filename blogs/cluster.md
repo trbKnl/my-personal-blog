@@ -12,9 +12,6 @@ description: How to build your own Raspberry Pi cluster with Kubernetes
 td {
     padding:0 15px;
 }
-pre {
-    background-color: lightgray;
-}
 </style>
 
 
@@ -98,13 +95,17 @@ With a basic understanding of Kubernetes, can you install it on a Pi cluster. I 
 The installation of k3s is one of the simplest things ever, just follow these [instruction](https://rancher.com/docs/k3s/latest/en/quick-start/).
 
 On your master node do this:
+
 ```
 $ curl -sfL https://get.k3s.io | sh - 
 ```
+
 On your worker nodes do this:
+
 ```
 $ curl -sfL https://get.k3s.io | K3S_URL=https://hostname-of-your-master-node:6443 K3S_TOKEN=mynodetoken sh -
 ```
+
 The instructions read: "The value to use for K3S\_TOKEN is stored at /var/lib/rancher/k3s/server/node-token on your server node."
 
 You now have an up and running k3s cluster! 
@@ -119,10 +120,12 @@ To connect `kubectl` on you dev machine to the cluster, follow these [instructio
 Kubectl is easy to use and to remember, because the syntax of the commands are well structured.
 
 To get you started:
+
 - `kubectl cluster-info`
 - `kubectl help`
 
 To do basic stuff:
+
 - `kubectl get pods`
 - `kubectl get pods --all-namespaces`
 - `kubectl describe pod <name-of-specific-pod>`
@@ -139,7 +142,7 @@ In order the deploy a containerized workload you can submit a yaml file, describ
 
 You can submit workloads/pods/desired states described in yaml files to the clustering using `kubectl`. Here is an example of a yaml file you can apply to your cluster with: `kubectl apply -f <nginx-example.yaml>`
 
-```
+```yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:

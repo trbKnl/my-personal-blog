@@ -1,12 +1,24 @@
 const express = require('express')
 const fs = require('fs');
 const matter = require('gray-matter');
-const md = require("markdown-it")({
+
+var hljs = require('highlight.js');
+var md = require("markdown-it")({
   html: true,
   linkify: true,
-  typographer: true})
-const router = express.Router()
+  typographer: true,
+  highlight: function (str, lang) {
+    if (lang && hljs.getLanguage(lang)) {
+      try {
+        return hljs.highlight(str, { language: lang }).value;
+      } catch (__) {}
+    }
 
+    return ''; // use external default escaping
+  }
+})
+
+const router = express.Router()
 
 
 router.get('/:id', (req, res) => {

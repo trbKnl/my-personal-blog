@@ -40,7 +40,7 @@ The general idea is to open a terminal in a new vim split that runs a Python int
 
 This following function opens a new vimsplit and starts a Python interpreter: 
 
-```
+```vim
 function StartPython()
     " Opens new split, starts the interpreter in a nvim terminal and store the channel id
     " Store the buffer id, so it can be killed later
@@ -62,7 +62,7 @@ So python uses indentation to tell the interpreter certain code belongs together
 
 The following function sends a line to the terminal window and puts the cursor on the next line:
 
-```
+```vim
 " Global variables
 " Record whether you have seen a blank line or not
 let g:seen_blank = 0
@@ -113,7 +113,7 @@ Now we have our functions, we can map them to keystrokes for easy use. We can do
 
 We can map our functions as follows:
 
-```
+```vim
 nmap <leader>s :call StartPython()<CR>
 nmap <space> :call SendLineTermBuf()<CR>
 ```
@@ -152,7 +152,7 @@ Other plugins that do the same thing are:
 
 Here's all the code:
 
-```
+```vim
 " Global variables
 let g:seen_blank = 0
 

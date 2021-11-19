@@ -227,7 +227,6 @@ done & echo "Process has been send to the background, please kill me! run: kill 
 
 # Note: the ampersand sends a program to the background and frees up the terminal. 
 # Do not forget to kill it
-
 ```
 
 To run this script, make it executable: `chmod +x ./myscript.sh`. Then you can run the program as follows: `$ /path/to/myscript.sh`. This script is appending a new line to a file called `counter.log`, a file which has been created by the script in the folder from where the script is run. Try executing `tail -f counter.log` on the file to see what happens. To see what the `-f` flag is doing, run: `man tail`.

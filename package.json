@@ -16,6 +16,7 @@
     "ejs": "^3.1.6",
     "express": "^4.17.1",
     "gray-matter": "^4.0.2",
+    "highlight.js": "^11.3.1",
     "markdown-it": "^12.0.4"
   },
   "devDependencies": {
