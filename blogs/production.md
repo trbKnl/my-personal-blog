@@ -1,6 +1,6 @@
 ---
 title: Machine learning in production
-date: 2021-13-08
+date: 2021-08-13
 description: An overview of the steps you have to take to put machine learning into production
 ---
 

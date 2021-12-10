@@ -17,9 +17,12 @@ def main():
         parsedmarkdown = markdown2.markdown(text, extras=["metadata"])
         dictout[blog] = parsedmarkdown.metadata
 
+
+
     with open('blogmetadata.json', 'w') as fp:
         json.dump(dictout, fp)
 
 
 if __name__ == "__main__":
     main()
+
