@@ -1,6 +1,7 @@
 import os
 import markdown2
 import json
+import datetime
 
 def main():
     # blog directory
@@ -17,7 +18,7 @@ def main():
         parsedmarkdown = markdown2.markdown(text, extras=["metadata"])
         dictout[blog] = parsedmarkdown.metadata
 
-
+    dictout = {k: v for k,v in sorted(dictout.items(), key=lambda item: item[1]['date'], reverse = True)}
 
     with open('blogmetadata.json', 'w') as fp:
         json.dump(dictout, fp)
@@ -25,4 +26,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 

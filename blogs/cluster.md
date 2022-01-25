@@ -1,6 +1,6 @@
 ---
 title: Raspberry Pi cluster with Kubernetes
-date: 2021-13-08
+date: 2021-08-14
 description: How to build your own Raspberry Pi cluster with Kubernetes
 ---
 
