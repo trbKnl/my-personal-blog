@@ -67,7 +67,7 @@ In order to connect to the Pi you will need to know its IP address. Probably you
 
 If you did not succeed in doing this, you can perform a network scan with `sudo nmap -sn 192.168.1.0/24` to see all the devices on your local network and what IP address they have. `nmap` stands for network map. You can install nmap using your package manager. 
 
-<h3 class="border-bottom mb-3 mt-5" id="goal-of-this-blog-post">Test the Rapsberry Pi camera module</h3>
+<h3 class="border-bottom mb-3 mt-5" id="goal-of-this-blog-post">Test the Pi camera module</h3>
 
 Its time to see if the camera is working. I tested out the camera using the command `raspistill -o test.jpg`. Which produces an image and stores it in the current directory.
 
