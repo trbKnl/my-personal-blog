@@ -1,4 +1,4 @@
-#### Personal Blog
+### My Personal Blog with a custom Content Management System
 
 My personal website made with Node, Express and EJS. It has a very simple content management system specifically tailored to my needs. For styling I used Bootstrap CSS.
 
