@@ -20,7 +20,7 @@ In this blog post you will learn:
 - Creating virtual machines with libvirt
 - Configuring bridge networks with netplan
 - Simulating machines behind different NAT's (aka people on computers in their homes on their own WiFi)
-- Firewalling and routing with net filter tables (`nft`)
+- Firewalling and NATing with nftables (`nft`)
 
 You need to know:
 
@@ -140,7 +140,7 @@ In the literature NATs that change source port numbers are called symmetric NATs
 
 ## How to simulate two clients behind NATs on a Linux machine 
 
-This was the theory. The rest of the post go on about how you could replicate 2 clients behind NATs on your own machine. 
+This was the theory. The rest of the post go on about how you could replicate 2 clients behind NATs on your own machine. So you can try hole punching yourself.
 
 The basic idea is as follows:
 
@@ -203,7 +203,7 @@ Some useful commands:
 - `virsh net-list --all`: Lists all networks that libvirt created 
 
 
-### Setup your networks 
+### Setup the bridge networks 
 
 Out of the box all the VMs you have created will be on a network named "default" that is created and maintained by libvirt. The super nice thing about this is, is that all your VMs will have ip addresses and have access to the internet, because libvirt will use a DCHP service called dnsmasq and all your VMs will have access to the internet because libvirt will add the appropriate firewall rules with `iptables`. Also a DNS will configured for you. VMs on the default network will not be able to communicate with each other by default. Because we are doing something more custom, and we want our VMs to be able to communicate to each other, we are going to setup networks of our own. 
 
@@ -285,7 +285,7 @@ We are going to configure a lot of networking stuff. Creating the whole setup at
 
 When you log into one of your VMs with `virsh console <name-of-VM>`. You will have no access to the internet, your VM will not have an ip address, DNS won't be configured and your host machine will not transfer packets from your VM to the internet.
 
-First make sure that packet forwarding is turned on your host machine do: `$ echo 1 > /proc/sys/net/ipv4/ip_forward`. You can read more about it [here](https://linuxconfig.org/how-to-turn-on-off-ip-forwarding-in-linux). If you don't turn this on, packets that are not meant for your machine will be dropped. 
+First make sure that packet forwarding is turned on your host machine do: `echo 1 > /proc/sys/net/ipv4/ip_forward`. You can read more about it [here](https://linuxconfig.org/how-to-turn-on-off-ip-forwarding-in-linux). If you don't turn this on, packets that are not meant for your machine will be dropped. 
 
 On the VMs you should also configure a DNS server they can use to resolve domain names, I used the DNS provided by google located at `8.8.8.8`. Changing the file `/etc/resolv.conf` to contain the lines:
 
@@ -316,7 +316,7 @@ The next thing we should do is to change the routes on the VM. You can check the
 192.168.111.0/24 dev eth0 scope link  src 192.168.111.100
 ```
 This means your VM now knows how to reach destinations on the network `192.168.111.0/24`. But in order to reach outside the network, we need to add a default route. 
-This default route will be the default route for all packages not destined for other known networks. To add the default route do `ip route add default via 192.168.111.1 dev eth0`. The output of `ip route` will be:
+This default route will be the default route for all packets not destined for other known networks. To add the default route do `ip route add default via 192.168.111.1 dev eth0`. The output of `ip route` will be:
 
 ```
 default via 192.168.111.1 dev eth0
@@ -328,6 +328,8 @@ default via 192.168.111.1 dev eth0
 Now for the last step, the host machine needs to be configured as a router. You can do that by changing your firewall settings with  `nftables` with this config:
 
 ```nft
+flush ruleset
+
 table inet filter {
 	chain input {
 		type filter hook input priority filter; policy accept;
@@ -359,7 +361,8 @@ Lets recap what we have done:
 
 - Configured packet forwarding
 - Configured a nameserver 
-- Configured an ip address
+- Configured the ip address
+- Configured the ip routes
 - Configured the host machine to be a router
 
 Graphically we have made this:
@@ -369,12 +372,127 @@ Graphically we have made this:
 </p>
 
 
-
-### The configuration of the ip addresses and routes with `iproute2`
-
+*Disclaimer*: You can probably do this more efficient, but this is a very specific setup for learning purposes anyway, so it does not matter.
 
 
+### Simulate 2 clients behind NAT devices 
 
+We can expand upon the steps in the previous paragraph to create the setup so we can perform the hole punching we are after 2 clients behind NAT devices. 
+
+This is the setup we are going to create:
+
+<p style="text-align:center;">
+    <img src="/vmrouterhostroutervm.svg" width="800">
+</p>
+
+Start the 4 VMs you have created. I assumed you have configured 2 VM to be using `br0` and 2 `br1`.
+
+First we are going to give all the VM ip addresses and routes .
+
+- On the NAT A VM run:
+
+```bash
+ip address add 192.168.111.101/24 dev eth0
+ip route add default via 192.168.111.1 dev eth0
+```
+
+Make sure to turn on packet forwarding (`echo 1 > /proc/sys/net/ipv4/ip_forward`)
+
+- On the NAT B VM run:
+
+```bash
+ip address add 192.168.222.101/24 dev eth0
+ip route add default via 192.168.222.1 dev eth0
+```
+
+Make sure to turn on packet forwarding (`echo 1 > /proc/sys/net/ipv4/ip_forward`)
+
+- On the client A VM run:
+
+```bash
+ip address add 192.168.111.100/24 dev eth0
+ip route add default via 192.168.111.101 dev eth0
+ip route del 192.168.111.0/24 dev eth0 # Upon assigning an ip in the first command this route is automatically created, delete this route manually, we want all traffic to go through our NAT VM
+```
+
+- On the client B VM run:
+
+```
+ip address add 192.168.222.100/24 dev eth0
+ip route add default via 192.168.222.101 dev eth0
+ip route del 192.168.222.0/24 dev eth0
+```
+
+Next we are going to configure the firewalls on the client VMs.
+
+
+On the client A and B VMS install the following very simple firewall:
+
+```
+flush ruleset
+
+table ip filter {
+	chain input {
+		type filter hook input priority 0; policy drop;
+		ct state invalid counter drop comment "early drop invalid packets, if connection tracking state is invalid"
+		ct state {established, related} counter accept comment "accept all connections related to connections made by us"
+		iif lo accept comment "accept loopback"
+		iif != lo ip daddr 127.0.0.1/8 counter drop comment "drop connections to loopback not coming from loopback"
+		tcp dport 22 counter accept comment "accept SSH"
+		counter comment "count dropped packets"
+	}
+	chain forward {
+		type filter hook forward priority 0; policy drop;
+		counter comment "count dropped packets"
+	}
+	chain output {
+		type filter hook output priority 0; policy accept;
+		counter comment "count accepted packets"
+	}
+}
+```
+
+You can apply this firewall with `nft -f <name-of-the-file>`. So how does this work. Whenever a packets enters an interface it is processed by [netfilter](https://en.wikipedia.org/wiki/Netfilter) in the linux kernel. Depending on the packet it traverses a set of chains, and in each chain you can define a set of rules, what should happen to the packet. I highly recommand you check out the [packet flow](https://wiki.nftables.org/wiki-nftables/index.php/Netfilter_hooks) diagram in the nftables documentation it is really helpful. It will give you an idea in what order packets will traverse different chains.
+
+So lets take this firewall as an example, I defined the table "filter" containing chains that  work on all packets from the "ip" family (IPv4). In this table I defined a chain called "input" and its of type filter with the input hook. This means, all IPv4 packets that are destined for the local machine, will be processed by this chain. If no rule is triggerd, the packet will be dropped (policy drop).
+If the connection state is invalid (whatever this means) the packet will be dropped. If the connection state is established or related, the packet will be accepted. Some loopback stuff, if there is tcp traffic on port 22 it will be accepted. If nu rule was triggered, the packet will be dropped.
+
+The counter is very handy. You can do `nft list ruleset` which prints out the current rules that are active, and it also shows the updated counters. The counters will show you the number of packets and bytes that the rule triggered, which is very useful to see if your rules are working. For example if you are trying to connect through ssh, but you see that the ssh counter remains 0. You know your tcp packets on port 22 are not being triggered by the rule.
+
+
+```
+flush ruleset
+
+table inet filter {
+   chain input {
+        type filter hook input priority 0; policy drop;
+        ct state invalid counter drop comment "early drop of invalid packets"
+        ct state {established, related} counter accept comment "accept all connections related to connections made by us"
+        counter comment "count dropped packets"
+   }
+    chain forward {
+        type filter hook forward priority 0; policy drop;
+        oif eth0 ct state invalid counter drop comment "early drop of invalid packets"
+        oif eth0 ct state {new, established, related} counter accept comment "accept all connections related to connections made by us"
+        counter comment "count dropped packets"
+    }
+    chain output {
+        type filter hook output priority 0; policy accept;
+    }
+}
+
+
+table inet nat {
+    chain postrouting {
+        type nat hook postrouting priority srcnat;
+        oifname "eth0" counter masquerade
+    }
+    chain prerouting {
+        type nat hook prerouting priority -100; policy accept;
+        tcp dport { 22 } counter dnat ip to 192.168.222.100
+    }
+}
+```
 
 
 
