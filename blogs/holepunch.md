@@ -4,7 +4,11 @@ date: 2022-02-20
 description: Learn to simulate a lab environment for testing purposes
 ---
 
-## Goal of this blog post
+<p style="text-align:center;">
+    <img src="/holepunchsetup.png" width="600">
+</p>
+
+# Goal of this blog post
 
 I saw [this](https://www.youtube.com/watch?v=TiMeoQt3K4g) very insightful video from Engineer Man in which he explains udp hole punching. 
 I wanted to know more about it, and I to replicate his setup but without renting virtual machine from a cloud provider. 
@@ -33,8 +37,10 @@ You need to have:
 - A system with Linux
 - A CPU that allows for virtualization (relatively modern CPU's support that)
 
+Although the blog is written chronologically, lots of parts are useful by themselves as well. Please skip the stuff your are not interested in.
 
-## What is NAT and why do we need it?
+
+# What is NAT and why do we need it?
 
 NAT stands for network address translation, and for the rest of the blog I will use the word NAT to denote a device that does network address translation. In a typical home setup, the router that you got from your internet service provider (ISP) does network address translation. Why do we need a NAT? Because the internet still works mainly on ipv4 and there are only a limited number of ip addresses. To protect the number of ip addresses in the world we mostly operate behind NATs. You can have a lot of devices on your local network behind a NAT, but from the outside world traffic all seems to come from the same ip address.
 
@@ -86,7 +92,7 @@ Definition of the tuple: (source ip, source port, destination ip, destination po
 Depending on the behavior of the NAT, hole punching will either almost always work, or almost always fail. Let's go through an example of both.
 
 
-### An example when hole punching will almost always work
+## An example when hole punching will almost always work
 
 Let's go through a tcp example when hole punching will almost always work:
 
@@ -113,7 +119,7 @@ Which indicates the connection is established, and will be alive for 431994 seco
 In this example 2 clients are behind NATs devices that do not change the port numbers: *in this case hole punching will almost always work*. 
 
 
-### An example when hole punching will almost never work
+## An example when hole punching will almost never work
 
 In this example 2 clients are behind NAT devices and NAT B changes the source port number. 
 In this case hole punching will almost never work
@@ -138,7 +144,7 @@ In the literature NATs that change source port numbers are called symmetric NATs
 
 
 
-## How to simulate two clients behind NATs on a Linux machine 
+# Simulate two clients behind NATs on a Linux machine 
 
 This was the theory. The rest of the post go on about how you could replicate 2 clients behind NATs on your own machine. So you can try hole punching yourself.
 
@@ -160,7 +166,7 @@ I will cover:
 This is the graphical representation of what we are going to work towards:
 
 
-### Creation of VMs with libvirt
+## Creation of VMs with libvirt
 
 Creating and working with VM with libvirt is pretty convenient. If you want to know how to install VMs with libvirt check this [blog](https://octetz.com/docs/2020/2020-05-06-linux-hypervisor-setup/) from octetz. 
 
@@ -203,11 +209,11 @@ Some useful commands:
 - `virsh net-list --all`: Lists all networks that libvirt created 
 
 
-### Setup the bridge networks 
+## Setup the bridge networks 
 
 Out of the box all the VMs you have created will be on a network named "default" that is created and maintained by libvirt. The super nice thing about this is, is that all your VMs will have ip addresses and have access to the internet, because libvirt will use a DCHP service called dnsmasq and all your VMs will have access to the internet because libvirt will add the appropriate firewall rules with `iptables`. Also a DNS will configured for you. VMs on the default network will not be able to communicate with each other by default. Because we are doing something more custom, and we want our VMs to be able to communicate to each other, we are going to setup networks of our own. 
 
-*Note* In this phase your VM will surely have an internet connection. Now is a great time to install all the software you think you will need. If you want to follow along your VMs will need: `nftables` and `conntrack`. 
+*Note* In this phase your VM will surely have an internet connection. Now is a great time to install all the software you think you will need. If you want to follow along your VMs will need: `nftables` and `conntrack` and `ncat` (any flavour of `ncat` will probably do). 
 
 We are going to create bridge networks with [netplan](https://netplan.io/). With netplan you can configure your own networks in yaml files, and they will be created upon boot. Pretty nice. As the backend for netplan I am using networkd (instead of NetworkManager). According to the site you can also use NetworkManager as the backend.
 
@@ -279,7 +285,7 @@ Now you need to configure the VMs that you created with libvirt, to use these ne
 You need to assign 2 of your VMs to `br0` and 2 to `br1`.
 
 
-### First steps in configuring networking on the VM 
+## First steps in configuring networking on the VM 
 
 We are going to configure a lot of networking stuff. Creating the whole setup at once might be a little too much, therefore, in this section we are going to configure 1 VM to use the bridge network `br0`, and make it so it has access to the internet. After this, you will probably appreciate all the things that libvirt is doing for you by default ;).
 
@@ -312,6 +318,7 @@ The output of `ip a` should look something like this:
 ```
 
 The next thing we should do is to change the routes on the VM. You can check the known routes with `ip route`:
+
 ```
 192.168.111.0/24 dev eth0 scope link  src 192.168.111.100
 ```
@@ -327,7 +334,7 @@ default via 192.168.111.1 dev eth0
 
 Now for the last step, the host machine needs to be configured as a router. You can do that by changing your firewall settings with  `nftables` with this config:
 
-```nft
+```bash
 flush ruleset
 
 table inet filter {
@@ -375,7 +382,7 @@ Graphically we have made this:
 *Disclaimer*: You can probably do this more efficient, but this is a very specific setup for learning purposes anyway, so it does not matter.
 
 
-### Simulate 2 clients behind NAT devices 
+## Simulate 2 clients behind NAT devices 
 
 We can expand upon the steps in the previous paragraph to create the setup so we can perform the hole punching we are after 2 clients behind NAT devices. 
 
@@ -387,7 +394,9 @@ This is the setup we are going to create:
 
 Start the 4 VMs you have created. I assumed you have configured 2 VM to be using `br0` and 2 `br1`.
 
-First we are going to give all the VM ip addresses and routes .
+### Assign the VM ip addresses and configure the routes
+
+First we are going to give all the VM ip addresses and routes.
 
 - On the NAT A VM run:
 
@@ -417,18 +426,19 @@ ip route del 192.168.111.0/24 dev eth0 # Upon assigning an ip in the first comma
 
 - On the client B VM run:
 
-```
+```bash
 ip address add 192.168.222.100/24 dev eth0
 ip route add default via 192.168.222.101 dev eth0
 ip route del 192.168.222.0/24 dev eth0
 ```
 
+
+### Configure firewalls for the clients
+
 Next we are going to configure the firewalls on the client VMs.
+On the client A and B VMs apply the following very simple firewall:
 
-
-On the client A and B VMS install the following very simple firewall:
-
-```
+```bash
 flush ruleset
 
 table ip filter {
@@ -459,21 +469,24 @@ If the connection state is invalid (whatever this means) the packet will be drop
 
 The counter is very handy. You can do `nft list ruleset` which prints out the current rules that are active, and it also shows the updated counters. The counters will show you the number of packets and bytes that the rule triggered, which is very useful to see if your rules are working. For example if you are trying to connect through ssh, but you see that the ssh counter remains 0. You know your tcp packets on port 22 are not being triggered by the rule.
 
+### Configure the router VMs 
 
-```
+On the NAT A and B VMs apply the following nftable rules:
+
+```bash
 flush ruleset
 
 table inet filter {
    chain input {
         type filter hook input priority 0; policy drop;
-        ct state invalid counter drop comment "early drop of invalid packets"
-        ct state {established, related} counter accept comment "accept all connections related to connections made by us"
+        ct state invalid counter drop 
+        ct state {established, related} counter 
         counter comment "count dropped packets"
    }
     chain forward {
         type filter hook forward priority 0; policy drop;
-        oif eth0 ct state invalid counter drop comment "early drop of invalid packets"
-        oif eth0 ct state {new, established, related} counter accept comment "accept all connections related to connections made by us"
+        oif eth0 ct state invalid counter drop 
+        oif eth0 ct state {new, established, related} counter accept 
         counter comment "count dropped packets"
     }
     chain output {
@@ -485,15 +498,48 @@ table inet filter {
 table inet nat {
     chain postrouting {
         type nat hook postrouting priority srcnat;
-        oifname "eth0" counter masquerade
+        oifname "eth0" counter masquerade comment "this is where the NAT happens"
     }
     chain prerouting {
         type nat hook prerouting priority -100; policy accept;
+        # depending on what router VM change the ip address: either 192.168.222.100 or192.168.111.100  
         tcp dport { 22 } counter dnat ip to 192.168.222.100
     }
 }
 ```
 
+Lets break this down (its very helpful to check the [packet flow](https://wiki.nftables.org/wiki-nftables/index.php/Netfilter_hooks)).
+Whenever a packet arrives at an interface it is processed by the prerouting chain. All packets are accepted, whenever a tcp packet arrives on port 22
+the destination address of that packet is changed to `192.168.222.100` (port forwarding so ssh connection attempt reach the client). 
+If a packet is not meant for a local process it goes to the forward chain.
+In the forward chain packets are accepted if the output interface is "eth0" and if the connection state is new, established or related.
+Afer the forward chain packets will go to the postrouting chain. 
+If the output interface is "eth0", I quote, the source address is automagically set to the ip of the output interface.
+This is where the actual network address is translated.
+
+### Try holepunching!
+
+With these configurations in place it is time to holepunch! Now you can hole punch, just like in Engineer Mans video.
+
+<p style="text-align:center;">
+    <img src="/holepunchsetup.png" width="800">
+</p>
+
+
+This is an example of UDP holepunching. You can send UPD packets with ncat and control the source port numbers.
+Do not forget to turn off the firewall on your host machine `nft flush ruleset`. On reboot your firewall will be back. And turn on packet forwarding.
+
+To track the connections table on the NAT VM. I run the command `watch -n 1 conntrack watch -n 1 conntrack -L -p UDP`. 
+You can see the hole punching happening! And you can use it to diagnose when something is wrong. 
+
+This to do with this setup:
+
+* Now you can tryout different NAT scenario's check the nftables documentation! 
+* You can tryout TCP holepunching. 
+* You can use this as a simulation setup to try out communication over NAT.
+* You can experiment with `nftables` 
+* Tryout firewall settings
+* Install `tshark` and inspect your network traffic
 
 
 
