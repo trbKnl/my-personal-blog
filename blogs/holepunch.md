@@ -1,6 +1,6 @@
 ---
-title: TCP and UDP hole punching through NAT devices
-date: 2022-02-20
+title: Hole punching through NAT devices
+date: 2022-02-22
 description: Learn to simulate a lab environment for testing purposes
 ---
 
