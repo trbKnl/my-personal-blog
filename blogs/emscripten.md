@@ -54,7 +54,7 @@ In this blog post I will discuss:
 * How I compiled C++ to WASM, honestly this was mostly a lot of RTFM'ing, the documentation out there is pretty good! But it can be a lot. 
 * The JavaScript code that glues all the parts together
 
-The title is a bit clickbait, its not really that efficient, buts that's probably also partly my own fault and partly because webassembly is not as efficient as native `C++`. However, the possibilities with compiling code to wasm and then running it client side in the browser are huge for statistics and machine learning. I tried to make this programming using only JavaScript, and I could not find a nice linear algebra library with convenient data structures.
+The title is a bit clickbait, its not really that efficient, but that's probably partly my own fault and partly because webassembly is not as efficient as native `C++`. However, the possibilities with compiling code to wasm and then running it client side in the browser are huge for statistics and machine learning. I tried to make this program using only JavaScript and I could not find a nice linear algebra library with convenient data structures. So, C++ came in very handy.
 
 <h3 class="border-bottom mb-3 mt-5" id="">General architecture</h3>
 
