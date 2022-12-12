@@ -22,36 +22,39 @@ td {
 
 <h2 class="border-bottom mb-3 mt-5">Content of this blog post</h2>
 
-This blog post will include:
+This blog post will talk about:
 
 - My hot take on ChatGPT
     - Is it any good?
     - Consequences for the educational system
     - Consequences for society
     - Consequences for myself
-- A case study where I let ChatGPT rewrite my first ever written blogpost.
+- My experience using ChatGPT to rewrite my first ever written blog post.
 
+I am really shocked and impressed by this AI and I do feel to need to give my hot take. It is most likely not that smart, nor original, but I hope it gets you thinking at least.
 
-I am really shocked and impressed by this AI and I do feel to need to give my hot take. It is most likely not that smart, nor orginal, but I hope at least it gets you thinking.
+At the time of writing ChatGPT is the first free public release phase.
 
-<h2 class="border-bottom mb-3 mt-5">My hot takes</h2>
+<h2 class="border-bottom mb-3 mt-5">My hot takes on ChatGPT</h2>
 
 #### Is it any good?
 
-Absolutely yes, damm it is good. Is it better than you? Yes it's better than you. Will it replace you? Do you have a job where you are rehasing other peoples content? Then yes.
-If you haven't tried ChatGPT out yet, I highly advise you to do so, or watch a YouTube video where someone else demonstrates it for you. I rewrote my first (terribly written) blog post and the results are fenominal. You can see it for yourself on this below.
+Absolutely yes, it is very good. Is it better than you? Yes it's better than you. Will it replace you? Do you have a job where you are rehashing other peoples content? Then yes.
+If you haven't tried ChatGPT out yet, I highly advise you to do so, or watch a YouTube video where someone else demonstrates it for you. I rewrote my first (terribly written) blog post and the results are phenomenal. You can see it for yourself in this blog post. 
 
 #### Consequences for the educational system
 
-I remember being in highschool and our math teacher told us: "you wont have a calculator in your pocket at any time of the day, so you better learn basic arithmetic". And I fully realize, that some extent, I will sound like that teacher when discussing the consequences a powerful AI such as this one will have on education. With this AI, students will be able to: write perfect english texts, commit plagiarism that will be extremely hard to detect, generate arguments for almost any non-current case, do coding exercises perfectly and much much more. I never learnt to do basic arithmetic  (and spelling for that matter), although a little embarrassing, it has not impacted my carreer in the slightest. Will this AI be the new calculator in your pocket?
+I remember being in high school and our math teacher told us: "you wont have a calculator in your pocket at any time of the day, so you better learn basic arithmetic". And I fully realize, that some extent, I will sound like that teacher when discussing the consequences a powerful AI such as this one will have on education. With this AI, students will be able to: write perfect English texts, commit plagiarism that will be extremely hard to detect, generate arguments for almost any non-current case, do coding exercises perfectly and much much more. 
 
-So how will the availability to a powerful AI impact students ability to learn new skills? I believe that just like in the calculator case, if you rely on a "crutch" too much, you will never really learn that skill. The important question is: will it matter in the future? I have no idea, but the fact remains that it's just a matter of time we will have an AI as powerful as ChatGPT in our pockets, that we would be able to use all the time. I do however think that some skills will remain important even with ChatGPT in our pockets, skills such as: critical thinking, forming arguments, deduction and many more. ChatGPT is definitely able to demonstrate these skills in a written assignment. Students could use ChatGPT to make assignments and trick teachers into giving them a passing grade. I believe that students who leverage an AI too much will miss out on valuable learning opportunities, that otherwise could make them a better humans.
+I never learned to do basic arithmetic (and spelling for that matter), although a little embarrassing, it has not impacted my career in the slightest. Will this AI be the new calculator in your pocket?
+
+So how will the availability to a powerful AI impact students ability to learn new skills? I believe that just like in the calculator case, if you rely on a "crutch" too much, you will never really learn that skill. The important question is: will it matter in the future? I have no idea, but the fact remains that it's just a matter of time we will have an AI as powerful as ChatGPT in our pockets, that we would be able to use all the time. I do however think that some skills will remain important even with ChatGPT in our pockets, skills such as: critical thinking, forming arguments, deduction and much more. ChatGPT can absolutely be used demonstrate these skills in a written assignment, I truly think that using ChatGPT most students would be able to pass the majority of assignments they have to write during their studies. I believe that students who leverage an AI too much will miss out on valuable learning opportunities, that could make them a smarter people.
 
 
 #### Consequences for society
 
-Honestly, I really do find it too hard to say something really insightful about what consequences an AI like this will have on society. For that, check out some critical thinkers of this age.
-Listen to Lex Fridman to get some positive vibes, listen to some Sam Harris for some negative vibes.
+Honestly, I really do find it too hard to say something really insightful about what consequences an AI like this will have on society. To get some perspective on that, please check out some critical thinkers of this age.
+Listen to Lex Fridman for some positive vibes, listen to some Sam Harris for some negative vibes.
 
 Having that said, here is my hot take. Some jobs will go away, some jobs will be created (I am not sure which ones but I am sure some jobs will be created because of this, maybe something like fake-news examiner). 
 A list of jobs that come to mind that will either go away or radically change: 
@@ -68,27 +71,27 @@ Also it will get extremely difficult to separate fake from real, that will have 
 #### Consequences for myself
 
 So what will an AI do for me personally?
-ChatGPT would make me way more productive. 
-I could write more code and better code and have more time for other things that really matter.
-I am quite happy that I am a generalist an never truly specialized, in for example, coding in frontend web frameworks. 
+ChatGPT will make me way more productive. 
+I could write more code and better code and have more time for other, presumably, more important things.
+I have to say that I am happy that I am a generalist an never truly specialized, in for example, coding in frontend web frameworks. 
 That is one of the first things I am going to use an AI for, and I am sure it will be great at it.
 
 Also, my writing is terrible, I would be able to improve massively in that area as well. 
 
-Overall I think my production would be way up: ChatGPT will handle all the details and leave me to decide what the bigger picture (for now at least) should look like, so from now on that is where I will focus my carreer on.
+Overall I think my production would be way up: ChatGPT will handle all the details and leave me to decide what the bigger picture (for now at least) should look like, so from now on that is where I will focus my career on.
 
-I dread however the reliance on yet another big tech company.
+I dread however the reliance on yet another big tech company. I would love to see FOSS models where the models and training data sets are fully transparent, and you only have to pay for the resources it costs to run the model.
 
-<h2 class="border-bottom mb-3 mt-5">Rewriting my first blog with ChatGPT</h2>
+<h2 class="border-bottom mb-3 mt-5">My experience with ChatGPT: rewriting my first blog</h2>
 
-Below you can find the `diff` between my first blog post written ever, and the improved version with ChatGPT. It is amazing what it could do: it rewrote complete sections, it rewrote tables keeping the table structure in tact and it added missing content to tables (relevant to the context!). I think my first blog post is especially well suited to be rewritten be ChatGPT because it is just a currated collection of very well known (and old) programs. A lot has been written about these programs already, and these text have been included in the trainingset.
+Below you can find the `diff` between my first blog post written ever, and the improved version with ChatGPT. It is amazing what it could do: it rewrote complete sections, it rewrote tables keeping the table structure in tact and it added missing content to tables (relevant to the context!). I think my first blog post is especially well suited to be rewritten be ChatGPT because it is just a curated collection of very well known (and old) programs. A lot has been written about these programs already, and these text have been included in the training set.
 
 Could you use ChatGPT to write this blog from scratch? Absolutely, but you do have to ask the right questions and steer the AI towards answer you think is right! In my case found ChatGPT to be somewhat general and verbose, but I was able to correct it and steer the content in the way I had in mind. 
 
 At some point in the rewrite I was not allowed to use ChatGPT anymore :( a huge bummer. 
 
-Unrelated to the rewritten blog, I asked ChatGPT all kinds of social, business related and ethical questions and it came up with remarkable, albeit, somewhat general answers. 
-If you are in the business of dealing well articulated, common sense, 2 clicks away on the internet knowledge, you will have steep competition. The huge problem with ChatGPT is of course you don't know whether it told you the truth. With low stakes problems, such as, how to orient mouse traps with respect to walls, I would trust ChatGPT, but other problems (how to develop a fair fraud detection model for an issurance company) I wouldn't, although it gave an amazing answer as well.
+Unrelated to the rewriting the blog post, I asked ChatGPT all kinds of social, business related and ethical questions and it came up with remarkable, albeit, somewhat general answers. 
+If you are in the business of dealing well articulated, common sense, 2 clicks away on the internet knowledge, you will have steep competition. The huge problem with ChatGPT is of course you don't know whether it tells you the truth. With low stakes problems, such as, how to orient mouse traps with respect to walls, I would trust ChatGPT, but other problems (how to develop a fair fraud detection model for an issurance company) I wouldn't, although it gave an amazing answer as well.
 
 
 <h2 class="border-bottom mb-3 mt-5">The new and improved blog by ChatGPT</h2>
