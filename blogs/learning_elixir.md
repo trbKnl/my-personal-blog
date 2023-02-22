@@ -44,7 +44,8 @@ But the main draw for me so far is:
 
 # Learning Elixir: Where to start?
 
-The main resource for learning is the official [Getting Started](https://elixir-lang.org/getting-started/introduction.html), you can find everything there.
+The main resource for learning is the official [Getting Started](https://elixir-lang.org/getting-started/introduction.html). 
+You can find everything there.
 
 I am currently reading 2 books:
 
@@ -53,7 +54,7 @@ I am currently reading 2 books:
 
 And I like them both.
 
-And also an [Elixir style guide](https://github.com/christopheradams/elixir_style_guide) so you can code in style.
+And here you can find an [Elixir style guide](https://github.com/christopheradams/elixir_style_guide) so you can code in style.
 
 # Learning Elixir: My notes
 
@@ -70,7 +71,7 @@ Its a good intermediate between the documentation and reading the official Elixi
 
 These notes are verbose enough so you have some context, but terse enough that you don't have to scroll through too much text.
 
-# Elixir: What is it about, the extreme summary?
+# Elixir: A dense summary
 
 Elixir is a functional language. 
 
@@ -187,6 +188,9 @@ list2 = [4 | list1]
 # Types in Elixir
 
 The most important complex data types are: Map, Tuple, List.
+The primitive types I skipped well as the `atom`. 
+Atoms are constants whose values are their own name. 
+They are easy to grasp, read more [here](https://hexdocs.pm/elixir/1.12/Atom.html).
 
 ## Map
 
