@@ -1,5 +1,5 @@
 ---
-title: Learning Elixir, my study notes
+title: Learning Elixir, my thoughts and study notes
 date: 2023-02-20
 description: How and why you should Learn Elixir
 ---
@@ -21,24 +21,28 @@ td {
 
 # Learning Elixir: Why?
 
-Why am I learning Elixir? I have to know some Elixir for my current job, but ended up really liking it. So I want to study it some more.
-It reminds me a lot of how I used `R`, the language I first started with. 
-I basically used `R` as a functional language, without even knowning what a functional language was. 
-After `R`, I spend some time learning object oriented programming, I never really liked to do object oriented programming myself, and I don't use it if I can avoid it.
+Elixir is a really fun (and useful) language.
 
-In come Elixir, my first functional language. Teaching me you can create good abstractions without mutable objects, methods and classes.
+Why am I learning Elixir? The short answer is, I have to know some Elixir for my current job, but I actually ended up really liking it.
+So I decided to study it some more, beyond the minimum.
+Elixir reminds me a lot of how I used `R`, the first language I learnt.
+Elixir is a functional language and I basically used `R` as a functional language, without even knowing what a functional language was at that time.
+After `R` I spend some time learning object oriented programming, which I never really truly liked.
 
-So, whats cool about Elixir? For one it has very nice features, such as patternmatching. 
+In come Elixir, my first "real" functional language.
+Teaching me you can create good abstractions without mutable objects, methods and classes, but with functions alone!
+Which is super interesting to read about and learn.
+
+So, whats cool about Elixir? For one, it has very nice features, such as pattern matching. Which we see more about this blog.
 
 But the main draw for me so far is:
 
 * The syntax: very short and good looking
 * Its built on Erlang: therefor Elixir is robust and highly concurrent, which I really like
 * Very good documentation: on the same level as `R` and its built in as well
+* Elixir also has pipes (`|>`) built in, just like Linux or `R`. Which I know an `R` lover can appreciate.
 
-Elixir also unix pipes built in, just like `R`. Which I know an `R` lover can appreciate.
-
-# Learning Elixir: Resources
+# Learning Elixir: Where to start?
 
 The main resource for learning is the official [Getting Started](https://elixir-lang.org/getting-started/introduction.html), you can find everything there.
 
@@ -66,7 +70,7 @@ Its a good intermediate between the documentation and reading the official Elixi
 
 These notes are verbose enough so you have some context, but terse enough that you don't have to scroll through too much text.
 
-# Elixir: What is it about?
+# Elixir: What is it about, the extreme summary?
 
 Elixir is a functional language. 
 
@@ -74,20 +78,35 @@ Elixir is dynamically typed.
 
 All data types in elixir are immutable.
 Copies are always returned because everything is immutable. 
-Copies are created in a smart way, so they seem copies but actually aren't, therefore there is minimal copying overhead.
+To reduce the copying overhead, Elixir creates copies in a smart way, so they seem like copies but under the hood they aren't.
 
 Functions do not have side effects. They return their output, and do nothing else! 
+Check out this [video](https://www.youtube.com/watch?v=0if71HOyVjY&t=1743s) why that is something you want.
 
-Documentation of Elixir is amazing.
-Get documentation on funtions, modules, operators:
+The Documentation of Elixir is amazing.
 
 ``` elixir
+# Get documentation on function, modules, operators:
+
 h Enum.each
 h File
 h case
 ```
 
 All code can be run in an interactive shell: `iex`
+
+# Elixir: My notes
+
+Next are my notes where I summarize the very basics of Elixir.
+
+My suggestion for following along: get the [raw markdown](https://raw.githubusercontent.com/trbKnl/my-personal-blog/main/blogs/learning_elixir.md) of these notes.
+And run the examples in `iex`.
+The examples try to show things that took me by surprise whenever I first encountered them.
+
+What I personally do is, I use my own (vim plugin)[https://niekdeschipper.com/projects/nvim_python_repl.md] in nvim to send code to `iex`.
+Although I really like my own plugin, I am using it for Python, NodeJS, R for a long time already and have no problems with it.
+
+But if you are a `(n)vim` user you should probably use something like [iron nvim](https://github.com/hkupty/iron.nvim), never tried it out, but probably does exactly the same thing as my plugin and much more.
 
 # The = match operator
 
@@ -108,7 +127,7 @@ list = [1, 2, 3]
 {:ok, file} = File.open("./myfile")
 ```
 
-Patternmatches can be chained:
+Pattern matches can be chained:
 
 ```elixir
 a = (b = 3 + 1)
@@ -121,7 +140,7 @@ time
 x = %{} = y
 ```
 
-In functions, you can overload and patternmatch:
+You can pattern match in function based on arguments:
 
 ``` elixir
 defmodule Mul do
@@ -137,28 +156,28 @@ Mul.mul({:two, 2})
 Mul.mul({:three, 2})
 ```
 
-ignoring a value with underscore:
+Ignoring a value with underscore:
 
 ``` elixir
 [a, _b] = [1, 1]
 [a, _] = [1, 1]
 ```
 
-Variable can't be bounded once:
+Variable can only be bounded once:
 
 ```elixir
 [a, a] = [1, 1]
-[a, a] = [1, 2]     # does not work
+[a, a] = [1, 2]  # does not work
 ```
 
-keep value of a fixed with caret called pin operator:
+Keep value of a fixed with caret called pin operator:
 
 ```elixir
 a = 1
 ^a = 2
 ```
 
-see this example
+See this example
 
 ``` elixir
 list1 = [1,2,3]
@@ -239,7 +258,7 @@ An example how you can use default arguments:
 [a: 1, b: 2] == [{:a, 1}, {:b, 2}]
 ```
 
-If a keyword list appreas as the last item in any context, you can leave the square brackets off. 
+If a keyword list appears as the last item in any context, you can leave the square brackets off. 
 This is useful for supplying arguments to a function.
 This really tripped me up the first time I saw it.
 
@@ -394,7 +413,7 @@ Times.double(2)
 ```
 
 Functions can be pattern matched, it will try to match based on the function definition order.
-This is a means to create conditional logic in your code, withouth if else statements.
+This is a means to create conditional logic in your code, without if else statements.
 Define from most specific to general
 
 ```elixir
@@ -443,16 +462,9 @@ h File.stream!
 
 `defp` defines a private function which can only be used in the module.
 
-With modules you can:
-
-* Nest modules
-* import into into modules: import "List, only: [flatten: 1]" where 1 is the arity
-* alias other modules: "alias Other.Moduler, as: Other
-* Modules can have attributes @author, they can be used as variables, look up how
-
 # Conditional logic
 
-The most important conditional logic in Elixir: `case`, `cond`, patternmatching on function arguments.
+The most important conditional logic in Elixir: `case`, `cond` and pattern matching on function arguments.
 
 ## case: matches values
 
@@ -550,7 +562,7 @@ end)
 
 ## List comprehension
 
-List comphrehension exists!
+List comprehension exists!
 
 It evaluates all combinations of multiple input sequences.
 If conditions is `true` do something and return the result.
