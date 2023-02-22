@@ -21,26 +21,12 @@ td {
 
 # Learning Elixir: Why?
 
-Elixir is a really fun (and useful) language.
+Why am I learning Elixir? 
 
-Why am I learning Elixir? The short answer is, I have to know some Elixir for my current job, but I actually ended up really liking it.
-So I decided to study it some more, beyond the minimum.
-Elixir reminds me a lot of how I used `R`, the first language I learnt.
-Elixir is a functional language and I basically used `R` as a functional language, without even knowing what a functional language was at that time.
-After `R` I spend some time learning object oriented programming, which I never really truly liked.
+The short answer is: I have to know some Elixir for my current job, but I actually ended up really liking it. Elixirs functional programming paradigm reminds me of my first programming language, R, which brings back nostalgic memories. Although I initially learned R without knowing what a functional language was, Elixir is helping me appreciate the beauty of functional programming and how to create abstractions with just functions, without the need for mutable objects, methods, or classes.
 
-In come Elixir, my first "real" functional language.
-Teaching me you can create good abstractions without mutable objects, methods and classes, but with functions alone!
-Which is super interesting to read about and learn.
+Elixir's syntax is concise and elegant, and it comes with several impressive features, such as pattern matching, which is explained further in this blog. One of the main draws of Elixir for me is that it's built on Erlang, making it incredibly robust and highly concurrent, which I find really appealing. Additionally, Elixir has good documentation that is very accessible just like R, and it comes built-in with the language. The fact that Elixir has built-in pipes (`|>`) like Linux or R, is also something that any R enthusiast can appreciate.
 
-So, whats cool about Elixir? For one, it has very nice features, such as pattern matching. Which we see more about this blog.
-
-But the main draw for me so far is:
-
-* The syntax: very short and good looking
-* Its built on Erlang: therefor Elixir is robust and highly concurrent, which I really like
-* Very good documentation: on the same level as `R` and its built in as well
-* Elixir also has pipes (`|>`) built in, just like Linux or `R`. Which I know an `R` lover can appreciate.
 
 # Learning Elixir: Where to start?
 
