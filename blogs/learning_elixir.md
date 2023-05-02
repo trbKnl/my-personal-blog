@@ -90,7 +90,7 @@ My suggestion for following along: get the [raw markdown](https://raw.githubuser
 And run the examples in `iex`.
 The examples try to show things that took me by surprise whenever I first encountered them.
 
-What I personally do is, I use my own (vim plugin)[https://niekdeschipper.com/projects/nvim_python_repl.md] in nvim to send code to `iex`.
+What I personally do is, I use my own [vim plugin](https://niekdeschipper.com/projects/nvim_python_repl.md] in nvim to send code to `iex`)
 Although I really like my own plugin, I am using it for Python, NodeJS, R for a long time already and have no problems with it.
 
 But if you are a `(n)vim` user you should probably use something like [iron nvim](https://github.com/hkupty/iron.nvim), never tried it out, but probably does exactly the same thing as my plugin and much more.
@@ -100,16 +100,16 @@ But if you are a `(n)vim` user you should probably use something like [iron nvim
 `=` is the match operator, it tries to bind the right-hand side to the left-hand side to make the statement true.
 This is an very important feature of Elixir.
 
-Example: 
+Examples: 
 
 ```elixir
 list = [1, 2, 3]
 [a, b, c] = list
 
-{_date, time} = :calendar.local_time
-{_, {hour, _, _}} = :calendar.local_time
+{_, {hour, _, _}} = :calendar.local_time  # ignore a match with _
+{_date, time} = :calendar.local_time      # ignore a a match with _<var_name>
 
-[head | tail] = [1, 2, 3]
+[head | tail] = [1, 2, 3]  # head has first item, tail the rest of the the list in a list
 
 {:ok, file} = File.open("./myfile")
 ```
@@ -530,6 +530,14 @@ Enum is eager.
 h Enum
 list = [1, 2, 3]
 Enum.filter(list, &(&1 != 2))
+
+# Maps are also enumerables
+# This example shows how maps are treated by enum
+# Similar to [(k, v) for k, v in my_dictionary.items()] in Python
+Enum.each(%{a: 1, b: 2}, fn {key, value} -> IO.puts("key #{key}, value #{value}") end)
+
+# Also works for keyword lists
+Enum.each([a: 1, b: 2], fn {key, value} -> IO.puts("key #{key}, value #{value}") end)
 ```
 
 ## Stream: lazy
