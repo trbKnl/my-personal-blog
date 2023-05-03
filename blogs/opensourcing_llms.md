@@ -67,9 +67,6 @@ for i in range(0,5):
     print("i is: " + str(i))
 ```
 
-You should really cater to the models strength, i.e. next word prediction. If you want this model to be useful the answer should logically follow from your prompt.
-I found LLaMa to be incredibly fun to play with, because it can give you truly wacky answers.
-
 You should really cater to the model's strength, i.e., next word prediction. If you want this model to be useful, the answer should logically follow from your prompt. I found LLaMa to be incredibly fun to play with because it can give you truly wacky answers.
 Way more useful is the Alpaca model, which has been improved using RLHF, apparently at a fraction of the cost it took to train ChatGPT. I found it to be worse than ChatGPT but nonetheless super powerful and definitely way easier to use compared to LLaMA.
 
