@@ -1,7 +1,7 @@
 ---
 title: On open sourcing large language models
 date: 2023-05-02
-description: How to run a very capable LLM Locally on your CPU
+description: How to run a very capable LLM locally on your CPU
 ---
 
 <style type="text/css">
@@ -23,8 +23,11 @@ td {
 
 In this blog post I will discuss:
 
-- How to run large language model (LLM) with similar quality tp ChatGPT 3.5 on your CPU
+- How to run a large language model (LLM) with similar quality to ChatGPT 3.5 locally on your CPU
 - Discuss whether open sourcing these models is a good idea in general
+
+You will need a machine with enough memory and a decent CPU. 
+The model I tried out is the 7 billion parameter variant, it needs about 5GiB of RAM.
 
 <h2 class="border-bottom mb-3 mt-5">A LLM locally on your CPU</h2>
 
@@ -44,7 +47,7 @@ The steps to get the models working under any OS are as follows:
 5. Ponder on the extremely convincing answer it gives
 6. Profit
 
-It took me approximate 30m to get it working, and I am not into C++ or Huggingface.
+It took me approximate 30m to get it working, and I am no expert in C++ or Huggingface.
 
 <h2 class="border-bottom mb-3 mt-5">Prompting LLaMA and Alpaca</h2>
 
@@ -64,7 +67,7 @@ for i in range(0,5):
     print("i is: " + str(i))
 ```
 
-You should really catar to the models strenght, i.e. next word prediction. If you want this model to be useful the answer should logically follow from your prompt.
+You should really cater to the models strength, i.e. next word prediction. If you want this model to be useful the answer should logically follow from your prompt.
 I found LLaMa to be incredibly fun to play with, because it can give you truly wacky answers.
 
 You should really cater to the model's strength, i.e., next word prediction. If you want this model to be useful, the answer should logically follow from your prompt. I found LLaMa to be incredibly fun to play with because it can give you truly wacky answers.
@@ -76,4 +79,4 @@ These models are extremely exciting. It is amazing and really scary at the same 
 
 For the immediate future, should we as a society be OK with the fact that everybody knows how to make pipe bombs for under 10 dollars? Honestly, I don't know. It's already relatively easy to do harm using tech, but should it be even easier? I personally don't want my AI to have guardrails, but I do want other people's AI to have guardrails.
 
-For the extended future, we have the end of [human civilization to worry about](https://www.youtube.com/watch?v=AaTRHFaaPG8). Give it a watch, it puts losing your job over AI into perspective :'(
+For the extended future, we have the end of [human civilization to worry about](https://www.youtube.com/watch?v=AaTRHFaaPG8). Give it a watch, it puts losing your job over AI into perspective.
