@@ -1,7 +1,7 @@
 ---
 title: OIDC and OAuth2 a full example
 date: 2023-09-01
-description: A full example of an OIDC identity provider, a client and a proctedted API
+description: A full example of an OIDC identity provider, a client and a protected API
 ---
 
 <style type="text/css">
