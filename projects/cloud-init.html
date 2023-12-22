@@ -1,0 +1,149 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Projects</title>
+    <link rel="stylesheet" href="/bootstrap.min.css"/>
+    <link rel="stylesheet" href="/default.css"/>
+    <link rel="icon" type="image/png" href="/siteicon.png">
+</head>
+<body>
+
+<div class="container">
+    <div class="row mt-3">
+        <a href="/"><img  alt="" src="/siteicon.png" width="50"></a>
+    </div>
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <h1 class="mt-5 mb-1">Local testing setup for Cloud-init</h1>
+            <div class="mb-4 text-secondary border-bottom">Test your Cloud-init configuration before deploying to the cloud</div>
+            <div><h2 class="border-bottom mb-3 mt-5">Goal of this blog post</h2>
+<p>In this blog post I will outline the steps you can take to create a local testing setup to initialize images with Cloud-init.</p>
+<p>In this blog post you will learn something about:</p>
+<ul>
+<li>Cloud-init</li>
+<li>Running a virtual machine with qemu</li>
+<li>The qcow2 disk format</li>
+</ul>
+<p>To follow along I assume you are on Linux and you are comfortable with installing software from your package manager.
+If you don’t have the commands I use, I assume you are able to install them yourself.</p>
+<h2 class="border-bottom mb-3 mt-5">Introduction to Cloud-init</h2>
+<p>What is Cloud-init? Clout-init is software that can be used to initialize images on first boot. The typical use case is as follows: you have an image that you need to deploy somewhere, and you need to apply some configurations: add users, install your public ssh key, install software, etc. Very useful stuff as almost everyone needs to do this. You only need to do it once by hand to realize its very tedious, error prone, and not replicable.</p>
+<p>You can checkout the Cloud-init documentation <a href="https://cloudinit.readthedocs.io/en/latest/">here</a>.</p>
+<h2 class="border-bottom mb-3 mt-5">Why this blog post?</h2>
+<p>It can take some time to install an image on a virtual machine in the cloud.
+Whenever you are trying to create a Cloud-init config its too tedious to test this configuration directly into the cloud, it takes too long, and its much harder to debug when something goes wrong.</p>
+<p>I needed to deploy images to the cloud, and wanted to make sure my Cloud-init config did what it was supposed to. In blog post I will outline the steps I took.</p>
+<h2 class="border-bottom mb-3 mt-5">Start with a basic Cloud-init setup</h2>
+<p>To obtain a basic Cloud-init setup I followed the qemu <a href="https://cloudinit.readthedocs.io/en/latest/tutorial/qemu.html">tutorial</a> on their website.
+It boils down to these steps:</p>
+<p>Create a test folder:</p>
+<pre><code>mkdir cloud-init-test-folder
+cd cloud-init-test-folder
+</code></pre>
+<p>Download an image (with Cloud-init installed):</p>
+<pre><code>wget https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img
+</code></pre>
+<p>Create a yaml file called <code>user-data</code> containing the following:</p>
+<pre><code>#cloud-config
+password: password
+chpasswd:
+  expire: False
+</code></pre>
+<p>This configuration changes the password of the default user (in this case the username is <code>ubuntu</code>) to password.</p>
+<p>Host your configurations using a simple http server:</p>
+<pre><code>python3 -m http.server --directory .
+</code></pre>
+<p>Start the vm with <code>qemu-system-x86_64</code> (qemu stands for quick emulator):</p>
+<pre><code>qemu-system-x86_64                          \                    
+    -net nic                                \                    
+    -net user                               \                    
+    -machine accel=kvm:tcg                  \                    
+    -cpu host                               \                    
+    -m 512                                  \ # This gives you VM 512MiB of memory
+    -nographic                              \ # Run in the terminal
+    -hda jammy-server-cloudimg-amd64.img    \                    
+    -smbios type=1,serial=ds='nocloud-net;s=http://10.0.2.2:8000/'
+</code></pre>
+<p>Log in with username: <code>ubuntu</code> and password: <code>password</code> to verify whether it worked. Press Control + a followed by x (<code>C-a x</code>) to kill the vm.</p>
+<h2 class="border-bottom mb-3 mt-5">The testing setup for Cloud-init I ended up using</h2>
+<p>The basic setup is not enough when you want to test properly i.e. you most likely want to install some software.
+I tried installing software using the above setup and immediately (not surprisingly) ran out of disk space.</p>
+<p>That’s when I realized (of course) you cannot install additional software on an <code>img</code> that is only the size of its contents.</p>
+<p>This is where the <a href="https://en.wikipedia.org/wiki/Qcow">qcow2</a> disk format comes in.
+The <code>qcow2</code> format is am image format that is resizable, and only takes up the amount it needs.
+Super useful for this particular use case.</p>
+<p>What I did was the following:</p>
+<ol>
+<li>Copy the downloaded image to a “fresh” image</li>
+<li>Convert to image to <code>qcow2</code> format</li>
+<li>Add a hypothetical 10GiB to the disk image, so you can install all the software you want</li>
+</ol>
+<p>You can do that with these commands:</p>
+<pre><code>cp jammy-server-cloudimg-amd64.img fresh.img &amp;&amp; 
+qemu-img convert -O qcow2 fresh.img fresh.qcow2 &amp;&amp; 
+qemu-img resize fresh.qcow2 +10G
+</code></pre>
+<p>Each time you want to tryout a new Cloud-init configuration. You can run these commands again to obtain a fresh image.</p>
+<p>I change the <code>user-data</code> to something a little more interesting (check the documentation for other, way more secure, example configurations).
+This configuration configures a Jupyterhub server on first boot:</p>
+<pre><code>#cloud-config
+
+# add admin user with password
+# This is purely for demonstration
+# Please configure something secure yourself
+users:
+  - default
+  - name: admin
+    shell: /bin/bash
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    lock_passwd: false
+    plain_text_passwd: password
+
+
+# update and install packages
+package_update: true
+package_upgrade: true
+
+# turn on ssh with password authentication
+ssh_pwauth: true
+
+# install jupyterhub and add an admin user
+runcmd:
+  - &quot;curl -L https://tljh.jupyter.org/bootstrap.py | python3 - --admin admin:password&quot;
+</code></pre>
+<p>Again, host your configurations with:</p>
+<pre><code>python3 -m http.server --directory .
+</code></pre>
+<p>Run with:</p>
+<pre><code>qemu-system-x86_64                           \                   
+    -net nic                                 \                   
+    -net user,hostfwd=tcp::10022-:22         \ # Configure ssh port to be 10022
+    -machine accel=kvm:tcg                   \                   
+    -cpu host                                \                   
+    -m 2048                                  \ # Increase the memory to 2GB                  
+    -nographic                               \                   
+    -hda fresh.qcow2                         \                   
+    -smbios type=1,serial=ds='nocloud-net;s=http://10.0.2.2:8000/'
+</code></pre>
+<p>Now you can ssh into your VM with password: <code>password</code>.</p>
+<pre><code>ssh admin@localhost -p 10022
+</code></pre>
+<p>Cool stuff! I ended up trying a whole lot of different configurations, so I was really happy that I took the time to figure out this setup.</p>
+<h2 class="border-bottom mb-3 mt-5">Tips and Tricks</h2>
+<p>Some Commands I found useful:</p>
+<ul>
+<li>Check the syntax of your <code>user-data</code> file with: <code>cloud-init schema --config-file user-data</code></li>
+<li>Check whether cloud-init is finished running: <code>cloud-init status --wait</code>. This is especially useful when deploying in the actual cloud. Ssh into your VM and run that command and see whether Cloud-init is finished or still running.</li>
+</ul>
+</div>
+        </div>
+    </div>
+</div>
+
+
+</body>
+</html>
+
+

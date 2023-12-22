@@ -1,0 +1,387 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Projects</title>
+    <link rel="stylesheet" href="/bootstrap.min.css"/>
+    <link rel="stylesheet" href="/default.css"/>
+    <link rel="icon" type="image/png" href="/siteicon.png">
+</head>
+<body>
+
+<div class="container">
+    <div class="row mt-3">
+        <a href="/"><img  alt="" src="/siteicon.png" width="50"></a>
+    </div>
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <h1 class="mt-5 mb-1">Efficient C++ code in the browser, an image processing example</h1>
+            <div class="mb-4 text-secondary border-bottom">C++ in the browser with emscripten embind</div>
+            <div><figure style="display:inline-block;">
+    <video style="outline-style:solid;" id="videoInput" width="175" height="131" alt="asdasdasasd"> </video>
+    <figcaption>Video feed</figcaption>
+</figure>
+<figure style="display:inline-block;">
+    <canvas style="outline-style:solid;" id="canvasFrame" width="175" height="131"></canvas>
+    <figcaption>Frames to be processed</figcaption>
+</figure>
+<figure style="display:inline-block;">
+    <canvas style="outline-style:solid;" id="canvasOutput" width="175" height="131"></canvas>
+    <figcaption>Low dimensional image</figcaption>
+</figure>
+<div class="slidecontainer">
+    <input type="range" min="0" max="20" value="0" class="slider" id="ncompSlider">
+    <p>Numer of components: <span id="ncompDisplay"></span></p>
+</div>
+<input type="button" id="startBtn" value="Start">
+<input type="button" id="stopBtn" value="Stop" disabled>
+<h3 class="border-bottom mb-3 mt-5" id="">Eigen faces from video feed</h3>
+<p>The program above is a demonstration of a real time <a href="https://en.wikipedia.org/wiki/Eigenface">eigenfaces</a> (if you put your face in front of the webcam). It takes as input a raw frame from the video feed, and sends back a low dimensional representation of that frame in black and white. The dimensions of the frame are reduced by using the singular value decomposition retaining only the <code>numer of components</code> that explain the most variance in the image data. For more information checkout my <a href="https://niekdeschipper.com/projects/pca.md">blogpost on PCA</a>.</p>
+<p>This program is purely for fun and the images created look really cool and artistic. What I like to do with this program, is start at only one component, and than slowly increment the number of components. Its then very fun to see which details of the image are reconstructed by adding more components. The most fun is around one to four components. Then the details added become increasingly minor.</p>
+<p>This program is run client side in the browser and is made with:</p>
+<ul>
+<li><a href="https://emscripten.org/docs/porting/connecting_cpp_and_javascript/embind.html">emscripten</a> to compile <code>C++</code> to webassembly</li>
+<li><code>C++</code> with the library <a href="https://eigen.tuxfamily.org/index.php?title=Main_Page">Eigen</a> a linear algebra library</li>
+<li>JavaScript for the glue code, the UI and it provides functions the webassembly procedures</li>
+</ul>
+<p>I have not tested the code for browser compatibility so it might not work for your, but I hope so.</p>
+<h3 class="border-bottom mb-3 mt-5" id="">Goal of this blog post</h3>
+<p>The goal of this blog post is to show people what cool things you can do with emscripten and to show you a fun example of eigenfaces. <a href="https://emscripten.org/">Emscripten</a> is a compiler that compiles C code to <a href="https://webassembly.org/">Webassembly</a>, an assembly language that can be run in modern browsers. This opens up really cool things, such as gaming in the browser, whole programs written in C or C++ run in the browser or this fun eigen face example. This blog post will give you some pointers on how to start compiling and using C++ code in the browser. Interesting problems that I had to solve were:</p>
+<ul>
+<li>How to compile C++ to webassembly</li>
+<li>How to use webassembly efficiently</li>
+<li>How to send data back and forth between this page (displaying the video output) and webworker running the webassembly code. This is needed, so the main thread is free for the UI and viewing this page. I did not do this right before, and it was a huge huge performance bottleneck. And even after all optimizations I did, I still do not really think this is performant. I think I get on average 3-5 frames are processed per second on my machine and the image is not particularly big. But still, I think you could definitely implement pretty calculation heavy estimation procedures this way. And the great thing about this is that all of this happens client side: so, no sensitive data has to be send to a server, and you do not have to have a beefy server in place doing calculations for your users.</li>
+</ul>
+<p>In this blog post I will discuss:</p>
+<ul>
+<li>The general approach I took to this problem, which I think is the most valuable part of this blog post so you can learn from from this approach and change it to your liking.</li>
+<li>How I compiled C++ to WASM, honestly this was mostly a lot of RTFM’ing, the documentation out there is pretty good! But it can be a lot.</li>
+<li>The JavaScript code that glues all the parts together</li>
+</ul>
+<p>The title is a bit clickbait, its not really that efficient, but that’s probably partly my own fault and partly because webassembly is not as efficient as native <code>C++</code>. However, the possibilities with compiling code to wasm and then running it client side in the browser are huge for statistics and machine learning. I tried to make this program using only JavaScript and I could not find a nice linear algebra library with convenient data structures. So, C++ came in very handy.</p>
+<h3 class="border-bottom mb-3 mt-5" id="">General architecture</h3>
+<p>The program works as follows:</p>
+<ol>
+<li>The program captures the video feed from the webcam, and sends frames to a webworker,</li>
+<li>this webworker runs webassembly code that performs the image processing,</li>
+<li>if that’s done the resulting frame is send back to the main thread, and it it shown on screen.</li>
+<li>repeat</li>
+</ol>
+<p>Here you can see the architecture in a graph:</p>
+<img src="/eigenfaces_program_arch.svg" width=800px>
+<p>The general development process went as follows:</p>
+<p>At first I did not implement a webworker, I thought I did not need to! But then when testing, I noticed the page scrolling was really slow, and during the webassembly procedures, the UI would completely hang. Makes a lot of sense, I just didn’t think about it beforehand. The hanging of the UI was unacceptable to me. In order to alleviate the UI, I implemented a <a href="https://developer.mozilla.org/en-US/docs/Web/API/Worker">webworker</a> this webworker runs the image processing in a separate thread, so the main thread is free to respond to the user, scrolling and clicking and whatnot.</p>
+<p>This presented a different problem, the webworker communicates with the main thread by sending messages back and forth using the webworker API. I this case the messages contain image data that need to be processed. I want the maximal number of frames per seconds possible, this means that a lot of bytes have to be send back and forth between the main thread and the worker thread. At first I send the image data using a message, which used the structured clone algorithm (whatever that is) to copy the data to the webwoker. This was very very slow.</p>
+<p>Luckily, there is a way to get data to the webworker that does not involve copying. You can transfer objects between the webworker and the main thread (see the webworker documentation). You can transfer the ownership of an ArrayBuffer (containing your image data) to the webworker, the object becomes unusable to the main thread, but it can now be used in the webworker thread. A stackoverflow post, I forget which one, suggested you could “ping pong” ArrayBuffers back and forth between the main and webworker thread (effectively preventing object copying), and that is what I implemented. This improved performance back to the original.</p>
+<p>Another spot where I tried to optimize was the webassembly code. When running webassembly code in the browser, all the webassembly objects live on the webassembly heap. If you want to go back and forth between wasm and JavaScript it also involves object copying! A huge bummer. But, <a href="https://emscripten.org/docs/porting/connecting_cpp_and_javascript/embind.html">emscripten bind</a>, provides memory views from C++ to JavaScript using <code>typed_memory_data</code>, so you can directly access memory on the webassembly heap from JavaScript. It surprised me how easily I got it to work, <code>thanks to emscripten bind</code></p>
+<h3 class="border-bottom mb-3 mt-5" id="">Emscripten: embind</h3>
+<p>With emscripten you can compile C and C++ to webassembly, for this project I chose emscripten embind, from their website: “Embind is used to bind C++ functions and classes to JavaScript, so that the compiled code can be used in a natural way by “normal” JavaScript.” No regrets, works like a charm.</p>
+<p>I compiled the project making use of <a href="https://cmake.org/">cmake</a>. I made use of these <a href="https://gist.github.com/WesThorburn/00c47b267a0e8c8431e06b14997778e4">instructions</a> I found. I don’t think I followed them completely, but it was enough to get me started. I setup my project folder as follows:</p>
+<p>My project folder was setup as follows:</p>
+<pre><code>├── build
+├── CMakeLists.txt      # contains the instructions from cmake on how to build
+├── eigen-3.4.0         # I downloaded the cpp eigen library and put it in this folder
+├── README              # contains crypted instructions for myself
+└── src
+    └── main.cpp        # contains the main program, which can be found below
+</code></pre>
+<p>My README contains the following content:</p>
+<pre><code>In order to make it work follow:
+
+https://gist.github.com/WesThorburn/00c47b267a0e8c8431e06b14997778e4
+
+CMAKE_TOOLCHAIN_FILE=/usr/lib/emscripten/cmake/Modules/Platform/Emscripten.cmake
+cd build
+emcmake cmake ..
+</code></pre>
+<p>I put the commands there in order to make it work. Because I always forget the exact commands, its great to have them somewhere, I also put links to resources I used, so I can always reconstruct what I did at a later time.</p>
+<p>These are the contents of my <code>CMakeLists.txt</code>:</p>
+<pre><code class="language-cmake"><span class="hljs-keyword">cmake_minimum_required</span>(VERSION <span class="hljs-number">3.0</span>)
+
+<span class="hljs-keyword">project</span>(HelloWasm)
+
+<span class="hljs-comment"># include files</span>
+<span class="hljs-keyword">include_directories</span>(./<span class="hljs-keyword">include</span> .<span class="hljs-keyword">include</span>/HelloWasm ./src)
+
+<span class="hljs-comment"># target</span>
+<span class="hljs-keyword">add_executable</span>(HelloWasm ./src/main.cpp )
+<span class="hljs-keyword">set_target_properties</span>(HelloWasm PROPERTIES LINK_FLAGS <span class="hljs-string">&quot;-s DISABLE_EXCEPTION_CATCHING=0 -s ASSERTIONS=0 -O3 -s ALLOW_MEMORY_GROWTH=1 --bind&quot;</span>)
+
+<span class="hljs-comment"># 3rd party libs</span>
+<span class="hljs-keyword">include_directories</span>(<span class="hljs-string">&quot;/path/to/this/particular/version/of/eigen-3.4.0/&quot;</span>)
+</code></pre>
+<p>I did not really pay special attention to this, I don’t even know if all the lines are necessary. The main thing this does for me is, making it so, that the compiler knows where the libraries are, it puts all generated files neatly in folders, and it handles the compiler flags for optimization. In order to know which compiler settings I needed, I read the emscripten bind documentation.</p>
+<p>Below you can find the cpp code. I annotated it so you know what it does. In summary, it performs an SVD on a matrix and stores the result in another matrix, both matrices are made available to JavaScript, using <code>typed_memory_view</code>.</p>
+<pre><code class="language-cpp"><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;iostream&gt;</span></span>
+<span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;cmath&gt;</span></span>
+<span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;emscripten/bind.h&gt;</span></span>
+<span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;emscripten/val.h&gt;</span></span>
+<span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;Eigen/Dense&gt;</span></span>
+<span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;Eigen/SVD&gt;</span></span>
+
+<span class="hljs-function">Eigen::MatrixXf <span class="hljs-title">init_input_matrix</span><span class="hljs-params">()</span> </span>{
+    Eigen::MatrixXf in;
+    in.<span class="hljs-built_in">resize</span>(<span class="hljs-number">175</span>, <span class="hljs-number">131</span>);
+    in.<span class="hljs-built_in">setZero</span>();
+    <span class="hljs-keyword">return</span> in;
+}
+
+<span class="hljs-function">Eigen::MatrixXf <span class="hljs-title">init_output_matrix</span><span class="hljs-params">()</span> </span>{
+    Eigen::MatrixXf out;
+    out.<span class="hljs-built_in">resize</span>(<span class="hljs-number">175</span>, <span class="hljs-number">131</span>);
+    out.<span class="hljs-built_in">setZero</span>();
+    <span class="hljs-keyword">return</span> out;
+}
+
+<span class="hljs-comment">// Global matrices</span>
+Eigen::MatrixXf inm = <span class="hljs-built_in">init_input_matrix</span>();
+Eigen::MatrixXf outm = <span class="hljs-built_in">init_output_matrix</span>();
+
+<span class="hljs-comment">// Function to give javascript access to global matrices</span>
+<span class="hljs-function">emscripten::val <span class="hljs-title">getInputMatrixBytes</span><span class="hljs-params">()</span> </span>{
+    <span class="hljs-keyword">return</span> emscripten::<span class="hljs-built_in">val</span>(emscripten::<span class="hljs-built_in">typed_memory_view</span>(<span class="hljs-number">175</span>*<span class="hljs-number">131</span>, inm.<span class="hljs-built_in">data</span>()));
+}
+
+<span class="hljs-function">emscripten::val <span class="hljs-title">getOutputMatrixBytes</span><span class="hljs-params">()</span> </span>{
+    <span class="hljs-keyword">return</span> emscripten::<span class="hljs-built_in">val</span>(emscripten::<span class="hljs-built_in">typed_memory_view</span>(<span class="hljs-number">175</span>*<span class="hljs-number">131</span>, outm.<span class="hljs-built_in">data</span>()));
+}
+
+<span class="hljs-comment">// Defines svd function with the settings I want</span>
+Eigen::BDCSVD&lt;Eigen::MatrixXf&gt; svd;
+
+<span class="hljs-comment">// Performs svd on the input matrix</span>
+<span class="hljs-comment">// Stores result in output matrix</span>
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">svdImage</span><span class="hljs-params">(<span class="hljs-type">int</span> ncomp)</span> </span>{
+
+    svd.<span class="hljs-built_in">compute</span>(inm, Eigen::ComputeThinV | Eigen::ComputeThinU);
+
+    <span class="hljs-type">const</span> Eigen::MatrixXf &amp;u = svd.<span class="hljs-built_in">matrixU</span>();
+    <span class="hljs-type">const</span> Eigen::MatrixXf &amp;v = svd.<span class="hljs-built_in">matrixV</span>();
+    <span class="hljs-type">const</span> Eigen::VectorXf &amp;sv = svd.<span class="hljs-built_in">singularValues</span>();
+
+    <span class="hljs-comment">// I read the Eigen FAQ on how to optimize, there I found out about noalias()</span>
+    outm.<span class="hljs-built_in">noalias</span>() = <span class="hljs-built_in">u</span>(Eigen::all, Eigen::<span class="hljs-built_in">seq</span>(<span class="hljs-number">0</span>, ncomp)) * <span class="hljs-built_in">sv</span>(Eigen::<span class="hljs-built_in">seq</span>(<span class="hljs-number">0</span>, ncomp)).<span class="hljs-built_in">asDiagonal</span>() * <span class="hljs-built_in">v</span>(Eigen::all, Eigen::<span class="hljs-built_in">seq</span>(<span class="hljs-number">0</span>, ncomp)).<span class="hljs-built_in">transpose</span>();
+}
+
+<span class="hljs-comment">// Code that embind used to provide bindings from wasm to javascript</span>
+<span class="hljs-comment">// read documentation for more details</span>
+<span class="hljs-built_in">EMSCRIPTEN_BINDINGS</span>(my_module) {
+    emscripten::<span class="hljs-built_in">function</span>(<span class="hljs-string">&quot;getInputMatrixBytes&quot;</span>, &amp;getInputMatrixBytes);
+    emscripten::<span class="hljs-built_in">function</span>(<span class="hljs-string">&quot;getOutputMatrixBytes&quot;</span>, &amp;getOutputMatrixBytes);
+    emscripten::<span class="hljs-built_in">function</span>(<span class="hljs-string">&quot;svdImage&quot;</span>, &amp;svdImage);
+}
+</code></pre>
+<h3 class="border-bottom mb-3 mt-5" id="">Webworker code</h3>
+<p>The webworker is the thread that does the actual processing of the images from the webcam feed. It does the following:</p>
+<ol>
+<li>It imports the generated wasm code with <code>importScripts</code></li>
+<li>when module is loaded with <code>onRunetimeInitialzed</code>, variables and a message event are defined</li>
+<li>on message “start” a frame is received, and the webassembly code is called, and a frame is posted back to the main thread. The only noteworthy thing, is the use of <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8ClampedArray">Uint8ClampedArray</a>. When integers are outside the range between 0 and 255 they are set to either 0 or 255 whichever is closest. This is really useful for me, because the results from <code>Module.svdImage</code> are not always between 0-255, which causes artifacts when when showing the image on screen. The Uint8ClampedArray prevents this artifacting all together.</li>
+</ol>
+<pre><code class="language-javascript">importScripts(<span class="hljs-string">&quot;./HelloWasm.js&quot;</span>)
+
+<span class="hljs-title class_">Module</span>.<span class="hljs-property">onRuntimeInitialized</span> = <span class="hljs-function">() =&gt;</span> {
+
+    <span class="hljs-comment">// Global variables</span>
+    <span class="hljs-keyword">let</span> input_matrix_bytes = <span class="hljs-title class_">Module</span>.<span class="hljs-title function_">getInputMatrixBytes</span>()
+    <span class="hljs-keyword">let</span> output_matrix_bytes = <span class="hljs-title class_">Module</span>.<span class="hljs-title function_">getOutputMatrixBytes</span>()
+    <span class="hljs-keyword">let</span> ncomp = <span class="hljs-number">0</span> 
+
+    self.<span class="hljs-property">onmessage</span> = <span class="hljs-function">(<span class="hljs-params">e</span>) =&gt;</span> {
+        <span class="hljs-keyword">switch</span> (e.<span class="hljs-property">data</span>.<span class="hljs-property">action</span>) {
+            <span class="hljs-keyword">case</span> <span class="hljs-string">&quot;start&quot;</span>:
+
+                <span class="hljs-comment">// receive frame</span>
+                <span class="hljs-keyword">let</span> frame = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Uint8ClampedArray</span>(e.<span class="hljs-property">data</span>.<span class="hljs-property">transferFrame</span>);
+
+                <span class="hljs-comment">// process frame with the webassembly code</span>
+                input_matrix_bytes.<span class="hljs-title function_">set</span>(frame)
+                <span class="hljs-title class_">Module</span>.<span class="hljs-title function_">svdImage</span>(ncomp)
+                frame.<span class="hljs-title function_">set</span>(output_matrix_bytes)
+
+                <span class="hljs-comment">// transfer the ownership of the frame, back to the main thread for displaying</span>
+                self.<span class="hljs-title function_">postMessage</span>({<span class="hljs-attr">type</span>: <span class="hljs-string">&quot;test&quot;</span>, frame}, [frame.<span class="hljs-property">buffer</span>]);
+
+                <span class="hljs-keyword">break</span>;
+            <span class="hljs-keyword">case</span> <span class="hljs-string">&quot;updateNcomp&quot;</span>:
+                <span class="hljs-variable constant_">NCOMP</span> = e.<span class="hljs-property">data</span>.<span class="hljs-property">ncomp</span>
+                <span class="hljs-keyword">break</span>;
+        }
+    }
+}
+</code></pre>
+<h3 class="border-bottom mb-3 mt-5" id="">Javascript glue code</h3>
+<p>Then there is the JavaScript code in the main thread, which contains: some opencv code to process and display the images, defines how to UI works (what happens when you click a button), and sends frames from the webcam to the webworker and async/awaits a new frame to display on which a new frame is send.</p>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> ncompSlider = <span class="hljs-variable language_">document</span>.<span class="hljs-title function_">querySelector</span>(<span class="hljs-string">&quot;#ncompSlider&quot;</span>)
+<span class="hljs-keyword">const</span> startBtn = <span class="hljs-variable language_">document</span>.<span class="hljs-title function_">querySelector</span>(<span class="hljs-string">&quot;#startBtn&quot;</span>)
+<span class="hljs-keyword">const</span> stopBtn = <span class="hljs-variable language_">document</span>.<span class="hljs-title function_">querySelector</span>(<span class="hljs-string">&quot;#stopBtn&quot;</span>)
+<span class="hljs-keyword">const</span> video = <span class="hljs-variable language_">document</span>.<span class="hljs-title function_">querySelector</span>(<span class="hljs-string">&quot;#videoInput&quot;</span>)
+<span class="hljs-keyword">const</span> ncompDisplay = <span class="hljs-variable language_">document</span>.<span class="hljs-title function_">querySelector</span>(<span class="hljs-string">&quot;#ncompDisplay&quot;</span>)
+ncompDisplay.<span class="hljs-property">innerHTML</span> = <span class="hljs-built_in">parseInt</span>(ncompSlider.<span class="hljs-property">value</span>) + <span class="hljs-number">1</span>
+
+<span class="hljs-keyword">const</span> worker = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Worker</span>(<span class="hljs-string">&quot;/worker.js&quot;</span>)
+
+<span class="hljs-keyword">let</span> canvasFrame = <span class="hljs-variable language_">document</span>.<span class="hljs-title function_">getElementById</span>(<span class="hljs-string">&quot;canvasFrame&quot;</span>); 
+<span class="hljs-keyword">let</span> context = canvasFrame.<span class="hljs-title function_">getContext</span>(<span class="hljs-string">&quot;2d&quot;</span>);
+<span class="hljs-keyword">let</span> src = <span class="hljs-keyword">new</span> cv.<span class="hljs-title class_">Mat</span>(video.<span class="hljs-property">height</span>, video.<span class="hljs-property">width</span>, cv.<span class="hljs-property">CV_8UC4</span>);
+<span class="hljs-keyword">let</span> dst = <span class="hljs-keyword">new</span> cv.<span class="hljs-title class_">Mat</span>(video.<span class="hljs-property">height</span>, video.<span class="hljs-property">width</span>, cv.<span class="hljs-property">CV_8UC1</span>);
+<span class="hljs-keyword">let</span> <span class="hljs-variable constant_">RUNNING</span> = <span class="hljs-literal">false</span>
+
+video.<span class="hljs-title function_">addEventListener</span>(<span class="hljs-string">&quot;play&quot;</span>, startFrameProcess)
+video.<span class="hljs-title function_">addEventListener</span>(<span class="hljs-string">&quot;pause&quot;</span>, stopFrameProcess)
+startBtn.<span class="hljs-title function_">addEventListener</span>(<span class="hljs-string">&quot;click&quot;</span>, startFrameProcess)
+stopBtn.<span class="hljs-title function_">addEventListener</span>(<span class="hljs-string">&quot;click&quot;</span>, stopFrameProcess)
+stopBtn.<span class="hljs-property">disabled</span> = <span class="hljs-literal">true</span>;
+
+ncompSlider.<span class="hljs-title function_">addEventListener</span>(<span class="hljs-string">&quot;change&quot;</span>, updateNcomp)
+
+
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">startFrameProcess</span>(<span class="hljs-params"></span>) {
+
+    <span class="hljs-comment">// Open video stream</span>
+    <span class="hljs-keyword">if</span> (video.<span class="hljs-property">srcObject</span> == <span class="hljs-literal">undefined</span>) {
+        <span class="hljs-keyword">try</span>  {
+            video.<span class="hljs-property">srcObject</span>= <span class="hljs-keyword">await</span> navigator.<span class="hljs-property">mediaDevices</span>.<span class="hljs-title function_">getUserMedia</span>({ <span class="hljs-attr">video</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">audio</span>: <span class="hljs-literal">false</span> })
+        } <span class="hljs-keyword">catch</span> {
+            <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&quot;An error occurred! &quot;</span> + err);
+        }
+    }
+
+    <span class="hljs-variable constant_">RUNNING</span> = <span class="hljs-literal">true</span>
+    <span class="hljs-keyword">let</span> transferFrame = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Uint8Array</span>(<span class="hljs-number">22925</span>)
+    startBtn.<span class="hljs-property">disabled</span> = <span class="hljs-literal">true</span>
+    stopBtn.<span class="hljs-property">disabled</span> = <span class="hljs-literal">false</span>;
+
+    <span class="hljs-keyword">while</span> (<span class="hljs-variable constant_">RUNNING</span>) {
+        video.<span class="hljs-title function_">play</span>()
+        context.<span class="hljs-title function_">drawImage</span>(video, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, video.<span class="hljs-property">width</span>, video.<span class="hljs-property">height</span>);
+        src.<span class="hljs-property">data</span>.<span class="hljs-title function_">set</span>(context.<span class="hljs-title function_">getImageData</span>(<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, video.<span class="hljs-property">width</span>, video.<span class="hljs-property">height</span>).<span class="hljs-property">data</span>);
+        cv.<span class="hljs-title function_">cvtColor</span>(src, dst, cv.<span class="hljs-property">COLOR_RGBA2GRAY</span>);
+        
+        transferFrame.<span class="hljs-title function_">set</span>(dst.<span class="hljs-property">data</span>)
+        worker.<span class="hljs-title function_">postMessage</span>({<span class="hljs-attr">action</span>: <span class="hljs-string">&quot;start&quot;</span>, transferFrame}, [transferFrame.<span class="hljs-property">buffer</span>])
+        transferFrame = <span class="hljs-keyword">await</span> <span class="hljs-title function_">waitForFrameFromWorker</span>()
+
+        dst.<span class="hljs-property">data</span>.<span class="hljs-title function_">set</span>(transferFrame)
+        cv.<span class="hljs-title function_">imshow</span>(<span class="hljs-string">&quot;canvasOutput&quot;</span>, dst); <span class="hljs-comment">// canvasOutput is the id of another &lt;canvas&gt;;</span>
+
+    }
+}
+            
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">waitForFrameFromWorker</span>(<span class="hljs-params"></span>) {
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve</span>) =&gt;</span> {
+        worker.<span class="hljs-property">onmessage</span> = <span class="hljs-function">(<span class="hljs-params">e</span>) =&gt;</span> {
+            <span class="hljs-title function_">resolve</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Uint8Array</span>(e.<span class="hljs-property">data</span>.<span class="hljs-property">frame</span>))
+        }
+    })
+}
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">stopFrameProcess</span>(<span class="hljs-params"></span>) {
+    video.<span class="hljs-title function_">pause</span>()
+    <span class="hljs-variable constant_">RUNNING</span> = <span class="hljs-literal">false</span>
+    worker.<span class="hljs-title function_">postMessage</span>({<span class="hljs-attr">action</span>: <span class="hljs-string">&quot;stop&quot;</span>})
+
+    startBtn.<span class="hljs-property">disabled</span> = <span class="hljs-literal">false</span>;
+    stopBtn.<span class="hljs-property">disabled</span> = <span class="hljs-literal">true</span>;
+}
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">updateNcomp</span>(<span class="hljs-params"></span>) {
+    ncompDisplay.<span class="hljs-property">innerHTML</span> = <span class="hljs-built_in">parseInt</span>(ncompSlider.<span class="hljs-property">value</span>) + <span class="hljs-number">1</span>
+    worker.<span class="hljs-title function_">postMessage</span>({<span class="hljs-attr">action</span>: <span class="hljs-string">&quot;updateNcomp&quot;</span>, <span class="hljs-attr">ncomp</span>: ncompSlider.<span class="hljs-property">value</span>})
+}
+
+</code></pre>
+<script src="/opencv.js" type="text/javascript"></script>
+<script src="/HelloWasm.js"></script>
+<script>
+
+const ncompSlider = document.querySelector("#ncompSlider")
+const startBtn = document.querySelector("#startBtn")
+const stopBtn = document.querySelector("#stopBtn")
+const video = document.querySelector("#videoInput")
+const ncompDisplay = document.querySelector("#ncompDisplay")
+ncompDisplay.innerHTML = parseInt(ncompSlider.value) + 1
+
+const worker = new Worker("/worker.js")
+
+let canvasFrame = document.getElementById("canvasFrame"); // canvasFrame is the id of <canvas>
+let context = canvasFrame.getContext("2d");
+let src = new cv.Mat(video.height, video.width, cv.CV_8UC4);
+let dst = new cv.Mat(video.height, video.width, cv.CV_8UC1);
+let RUNNING = false
+
+video.addEventListener("play", startFrameProcess)
+video.addEventListener("pause", stopFrameProcess)
+startBtn.addEventListener("click", startFrameProcess)
+stopBtn.addEventListener("click", stopFrameProcess)
+stopBtn.disabled = true;
+
+ncompSlider.addEventListener("change", updateNcomp)
+
+
+async function startFrameProcess() {
+
+    // Open video stream
+    if (video.srcObject == undefined) {
+        try  {
+            video.srcObject = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+        } catch {
+            console.log("An error occurred! " + err);
+        }
+    }
+
+    RUNNING = true
+    let transferFrame = new Uint8Array(22925)
+    startBtn.disabled = true
+    stopBtn.disabled = false;
+
+    video.play()
+    while (RUNNING) {
+        context.drawImage(video, 0, 0, video.width, video.height);
+        src.data.set(context.getImageData(0, 0, video.width, video.height).data);
+        cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY);
+        
+        transferFrame.set(dst.data)
+        worker.postMessage({action: "start", transferFrame}, [transferFrame.buffer])
+        transferFrame = await waitForFrameFromWorker()
+
+        dst.data.set(transferFrame)
+        cv.imshow("canvasOutput", dst); // canvasOutput is the id of another <canvas>;
+
+    }
+}
+            
+async function waitForFrameFromWorker() {
+    return new Promise((resolve) => {
+        worker.onmessage = (e) => {
+            resolve(new Uint8Array(e.data.frame))
+        }
+    })
+}
+
+function stopFrameProcess() {
+    video.pause()
+    RUNNING = false
+    worker.postMessage({action: "stop"})
+
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+}
+
+function updateNcomp() {
+    ncompDisplay.innerHTML = parseInt(ncompSlider.value) + 1
+    worker.postMessage({action: "updateNcomp", ncomp: ncompSlider.value})
+}
+
+</script>
+</div>
+        </div>
+    </div>
+</div>
+
+
+</body>
+</html>
+
+

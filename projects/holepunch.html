@@ -1,0 +1,463 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Projects</title>
+    <link rel="stylesheet" href="/bootstrap.min.css"/>
+    <link rel="stylesheet" href="/default.css"/>
+    <link rel="icon" type="image/png" href="/siteicon.png">
+</head>
+<body>
+
+<div class="container">
+    <div class="row mt-3">
+        <a href="/"><img  alt="" src="/siteicon.png" width="50"></a>
+    </div>
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <h1 class="mt-5 mb-1">Hole punching through NAT devices</h1>
+            <div class="mb-4 text-secondary border-bottom">Learn to simulate a lab environment for testing purposes</div>
+            <div><p style="text-align:center;">
+    <img src="/holepunchsetup.png" width="600">
+</p>
+<ol>
+<li><a href="#1">Goal of this blog post</a></li>
+<li><a href="#2">What is NAT and why do we need it?</a>
+<ol>
+<li><a href="#2.1">What is hole punching?</a></li>
+<li><a href="#2.2">An example when hole punching will almost always work</a></li>
+<li><a href="#2.3">An example when hole punching will almost never work</a></li>
+</ol>
+</li>
+<li><a href="#3">Simulate two clients behind NATs on a Linux machine</a>
+<ol>
+<li><a href="#3.1">Creating VMs with libvirt</a></li>
+<li><a href="#3.2">Setup the bridge networks </a></li>
+<li><a href="#3.3">First steps in configuring networking on the VM </a></li>
+<li><a href="#3.4">Simulate 2 clients behind NAT devices </a>
+<ol>
+<li><a href="#3.4.1">Assign the VM ip addresses and configure the routes</a></li>
+<li><a href="#3.4.2">Configure firewalls for the clients</a></li>
+<li><a href="#3.4.3">Configure the router VMs </a></li>
+</ol>
+</li>
+<li><a href="#3.5">Try holepunching!</a></li>
+</ol>
+</li>
+</ol>
+<h2>Goal of this blog post <a name="1"></a></h2>
+<p>I saw <a href="https://www.youtube.com/watch?v=TiMeoQt3K4g">this</a> very insightful video from Engineer Man in which he explains udp hole punching.
+I wanted to know more about it, and I to replicate his setup but without renting virtual machines from a cloud provider.
+This blog post will show how to replicate the video of Engineer Man on your own machine using virtual machines.</p>
+<p>The thing I initially set out to study was whether I could identify conditions when hole punching works and when it fails.
+You can find an answer to this question on the internet, but I was not really satisfied with those answers, so I will present my own answer with detailed examples.</p>
+<p>In this blog post you will learn:</p>
+<ul>
+<li>Conditions when hole punching does work</li>
+<li>Creating virtual machines with libvirt</li>
+<li>Configuring bridge networks with netplan</li>
+<li>Simulating machines behind different NAT’s (aka people on computers in their homes on their own WiFi)</li>
+<li>Firewalling and NATing with nftables (<code>nft</code>)</li>
+</ul>
+<p>You need to know:</p>
+<ul>
+<li>The command line basics</li>
+<li>The very basic of tcp, udp and ip</li>
+<li>Optional: it really helps to have some familiarity with networking concepts</li>
+</ul>
+<p>You need to have:</p>
+<ul>
+<li>A system with Linux</li>
+<li>A CPU that allows for virtualization (relatively modern CPU’s support that)</li>
+</ul>
+<p>Although the blog is written chronologically, lots of parts are useful by themselves as well. Please skip the stuff your are not interested in.</p>
+<h2>What is NAT and why do we need it? <a name="2"></a></h2>
+<p>NAT stands for network address translation, and for the rest of the blog I will use the word NAT to denote a device that does network address translation. In a typical home setup, the router that you got from your internet service provider (ISP) does network address translation. Why do we need a NAT? The internet still works mainly on ipv4 and there are only a limited number of ip addresses. To protect the number of ip addresses in the world we mostly operate behind NATs. You can have a lot of devices on your local network behind a NAT, but from the outside world traffic seems to come from the same ip address.</p>
+<p>This is a reason why its very hard to convict someone for pirating copyright material, because its hard to determine which exact device did the downloading. This is also the reason you cannot sent tcp/ip packets directly to your grandma PC. You can send packets to your grandma’s public ip but you have no way of specifying to which actual device the packet should go to. Here is a picture with an example of two private networks behind NAT devices.</p>
+<p style="text-align:center;">
+    <img src="/networksbehindNAT.svg" width="600">
+</p>
+<p>You could argue that having a NAT device as between you and the internet is a form of weak protection. One cannot send packets directly to you when you did not initiate contact first and it provides a weak form or anonymity: was it you or your roommate that downloaded that movie?</p>
+<p>The main problem with devices behind NATs is: how do you initiate contact with another peer behind a NAT? One solution could be: client B configures his NAT in such a way that all traffic on port 80 gets forwarded to his device (this is called “port forwarding”). Then he has a program listening on port 80 for incoming traffic and handles it accordingly. Client A can send traffic to the public ip of client B to port 80, knowing that it will be forward to his device.</p>
+<p>This solution works, but you have to configure port forwarding which is not very convenient and if client C (behind the same NAT as B) wants to talk to client A they have to negotiate another port number, because all incoming traffic on port 80 is being forwarded to client A already.</p>
+<p>Another solution would be to have a service that acts as a relay between clients (for example Discord). This is less than ideal, because then you are dependent on a service to handle your communications properly.
+It would be nicer if communications could go directly from peer to peer. But how do you establish a peer to peer network connection when clients are behind NATs, that is where tcp or udp hole punching comes in.</p>
+<p><em>Note:</em> We would not need NAT if the world would switch to ipv6. There are enough ipv6 addresses to provide every machine with its own ip address. With no NAT you would lose the weak form of anonymity, but it would be easier to communicate peer to peer (in a secure way).</p>
+<h3>What is hole punching? <a name="2.1"></a></h3>
+<p>Normally, when a someone sends a packet to your public ip (that is meant for your device) your NAT device will drop the packet. Your NAT device will <em>not</em> drop the packet when it already expects a packet that is meant for you.</p>
+<p>You can let your NAT know that it should expect a packet for you, by sending a packet yourself to the exact same address that you will be expecting a packet from. This creates an entry in the connection table of your NAT, and for a certain amount of time (120 seconds for example) your NAT will forward incoming packets to you (from the exact address that you send a packet to). If you will not get an answer in the set period of time the hole closes again, and you NAT will drop further packets.</p>
+<p>So when client A and B behind NATs want to communicate peer to peer, they need to know:</p>
+<ul>
+<li>Client A and B need to know each others public ip addresses</li>
+<li>Client A should know the port number that Client B will be expecting traffic on</li>
+<li>Client B should know the port number that Client A will be expecting traffic on</li>
+<li>Either client A or B should punch a hole through their NAT so a connection can be established</li>
+</ul>
+<p>This is a graphical representation how a packet would flow from client A to client B</p>
+<pre><code>Client A: (192.168.1.1, 23456, 89.43.234.116, 55555) 
+                            ---&gt;
+       NAT A: (77.123.456.111, 23456, 89.43.234.116, 55555) 
+                             |
+                          internet
+                             |
+       NAT B: (89.43.234.116, 55555, 77.123.456.111, 23456) 
+                           &lt;---
+Client B: (10.10.10.10, 55555, 192.168.1.1, 23456)
+
+Definition of the tuple: (source ip, source port, destination ip, destination port)
+</code></pre>
+<p>Depending on the behavior of the NAT, hole punching will either almost always work, or almost always fail. Let’s go through an example of both.</p>
+<h3>An example when hole punching will almost always work <a name="2.2"></a></h3>
+<p>Let’s go through a tcp example when hole punching will almost always work:</p>
+<ol>
+<li>Client A sends a SYN to Public ip of client B: <code>(192.168.1.1, 23456, 89.43.234.116, 55555)</code></li>
+<li>NAT A changes the source ip of the packet: <code>(77.123.456.111, 23456, 89.43.234.116, 55555)</code></li>
+<li>Client A has punched a hole in NAT A.
+NAT A creates the following entry in its connection table:</li>
+</ol>
+<p><code>120 TIME_WAIT SYN_SENT src=192.168.1.1 dst=89.43.234.116 sport=23456 dport=55555 [UNREPLIED] src=89.43.234.116 dst=77.123.456.111 sport=55555 dport=23456</code></p>
+<p>this lines tells you a SYN packet has been sent, for 120 seconds your NAT device will wait for an answer packet with these characteristics <code>(89.43.234.116, 55555, 77.123.456.111, 23456)</code>.
+If a packet with these characteristics arrives NAT A will forward that packet to client A. If not the hole will be closed and NAT A won’t forward the packet.</p>
+<ol start="4">
+<li>Client B sends a SYN to the public ip of client A: <code>(10.10.10.10, 55555, 192.168.1.1, 23456)</code></li>
+<li>NAT B changes the source ip of the packet: <code>(89.43.234.116, 55555, 77.123.456.111, 23456)</code></li>
+<li>The packet from client B will arrive at NAT A it matches the characteristics in the connection table of NAT A, NAT A forwards the packet the client A</li>
+<li>Client A and B will continue the tcp handshake</li>
+<li>After the handshake the entry in the connection table of NAT A will be:</li>
+</ol>
+<p><code>431994 ESTABLISHED src=129.168.1.1 dst=89.43.234.116 sport=23456 dport=55555 src=89.43.234.116 dst=77.123.456.111 sport=55555 dport=23456 [ASSURED] mark=0 use=1</code></p>
+<p>Which indicates the connection is established, and will be alive for 431994 seconds!</p>
+<p>In this example 2 clients are behind NATs devices that do not change the port numbers: <em>in this case hole punching will almost always work</em>.</p>
+<h3>An example when hole punching will almost never work <a name="2.3"></a></h3>
+<p>In this example 2 clients are behind NAT devices and NAT B changes the source port number.
+In this case hole punching will almost never work</p>
+<ol>
+<li>Client A sends a SYN to Public ip of client B: <code>(192.168.1.1, 23456, 89.43.234.116, 55555)</code></li>
+<li>NAT A changes the source ip of the packet: <code>(77.123.456.111, 23456, 89.43.234.116, 55555)</code></li>
+<li>Client A has punched a hole in NAT A.
+NAT A creates the following entry in its connection table:</li>
+</ol>
+<p><code>120 TIME_WAIT SYN_SENT src=192.168.1.1 dst=89.43.234.116 sport=23456 dport=55555 [UNREPLIED] src=89.43.234.116 dst=77.123.456.111 sport=55555 dport=23456</code></p>
+<ol start="4">
+<li>Client B sends a SYN to the public ip of client A: <code>(10.10.10.10, 55555, 192.168.1.1, 23456)</code></li>
+<li>NAT B changes the source ip and the source port of the packet: <code>(89.43.234.116, 49873, 77.123.456.111, 23456)</code></li>
+<li>The packet from client B will arive at NAT A it does not match the correct characteristics because NAT B changed the source port, NAT A will drop the packet</li>
+<li>A connection cannot be established</li>
+</ol>
+<p>So, when does hole punching work? When both NAT devices do not change the source port numbers of the outgoing packages! Why? If the NAT of client A changes the source port number, client B does not know where to send the traffic to. Also, client A punched a hole through its NAT but its expecting traffic from client B with a different source port number, so client A will drop the packet from client B. If one of the 2 NATs changes the source port number, hole punching will fail.</p>
+<p>In the literature NATs that change source port numbers are called symmetric NATs.</p>
+<p><em>Note</em> When one of the two devices is not behind a NAT (even a NAT that changes source port numbers) no hole has to be punched and a connection can always be established (if there are no other firewalls of course).</p>
+<h2>Simulate two clients behind NATs on a Linux machine  <a name="3"></a></h2>
+<p>In the rest of the blog post I will go on about how you can replicate 2 clients behind NATs on your own machine.
+So you can try hole punching yourself.</p>
+<p>The basic idea is as follows:</p>
+<ol>
+<li>Simulate 2 bridge networks (2 virtual switches)</li>
+<li>On those 2 networks “plug in” 2 virtual machines (VM)</li>
+<li>Configure one VM to be a NAT (router) and configure one VM to be a client</li>
+</ol>
+<p>I will cover:</p>
+<ul>
+<li>The creation of VMs with <a href="https://libvirt.org/docs.html">libvirt</a></li>
+<li>The configuration of bridge networks with <a href="https://netplan.io/">netplan</a></li>
+<li>How to configure the VMs so they will use the bridge networks</li>
+<li>The configuration of the ip addresses and routes with <code>iproute2</code></li>
+<li>The configuration of a firewall for the client VMs with <a href="https://wiki.nftables.org/wiki-nftables/index.php/Main_Page"><code>nftables</code></a></li>
+<li>The configuration the NAT VMs also with <a href="https://wiki.nftables.org/wiki-nftables/index.php/Main_Page"><code>nftables</code></a></li>
+</ul>
+<h3>Creating VMs with libvirt <a name="3.1"></a></h3>
+<p>Creating and working with VMs using libvirt is pretty convenient. If you want to know how to install VMs with libvirt check this <a href="https://octetz.com/docs/2020/2020-05-06-linux-hypervisor-setup/">blog</a> from octetz.</p>
+<p>I love how his blog starts, I feel the same way:
+<em>… (with libvirt and linux tools in general) you can laugh at all your friends with their $10,000 homelab investment while you’re getting all the same goodness on commodity hardware :)</em></p>
+<p>Also check out his Youtube channel for videos about libvirt, for example this <a href="https://www.youtube.com/watch?v=6ccpDwT1qnw">video</a>. After you got the basics down the <a href="https://libvirt.org/manpages/virsh.html">official documentation</a> is a good resource to read about the details.</p>
+<p>You have a couple of choices to work with libvirt but I enjoy working with <code>virsh</code> a libvirt command line tool. I work with VMs through <code>ssh</code> or through <code>virsh console &lt;name-of-VM&gt;</code>. You could use them with a graphical interface but for this usecase (and all others tbf ;)) I find that inconvenient as we will only be using applications without GUI’s.</p>
+<p>My image of choice is Alpine: its lightweight i.e. it has versions available with the bare minimum pre-installed. You can pick your release <a href="https://alpinelinux.org/releases/">here</a>. I picked a version that is called “virt” which optimized for virtual machines, I don’t know what that means, but I like it.</p>
+<p>This is the commands I used to create the VMs:</p>
+<pre><code class="language-bash">virt-install
+    --name alpine-network-test
+    --ram 2048 
+    --disk path=/var/lib/libvirt/images/alpine-network-test.qcow2,size=8 
+    --vcpus 2 
+    --os-type linux 
+    --os-variant generic 
+    --console pty,target_type=serial 
+    --cdrom ./alpine-virt-3.14.2-x86_64.iso
+</code></pre>
+<p>If you are satisfied with one VM you created you can clone it with:</p>
+<pre><code class="language-bash">virt-clone --original alpine-network-test --name alpine-network-test-2 --auto-clone
+</code></pre>
+<p>To create new VM that is exactly the same, but with a different name.</p>
+<p>Some useful commands:</p>
+<ul>
+<li><code>virsh start &lt;name-of-your-VM&gt;</code>: Starts your VM</li>
+<li><code>virsh destroy &lt;name-of-your-VM&gt;</code>: Stops your VM</li>
+<li><code>virsh console &lt;name-of-your-VM&gt;</code>: Get a shell to your VM</li>
+<li><code>virsh list --all</code>: Lists your VMs</li>
+<li><code>virsh net-list --all</code>: Lists all networks that libvirt created</li>
+</ul>
+<h3>Setup the bridge networks  <a name="3.2"></a></h3>
+<p>Out of the box, all the VMs you have created will be on a network named “default” that is created and maintained by libvirt. The super nice thing about this is, is that all your VMs will have ip addresses and have access to the internet, because libvirt will use a DCHP service called dnsmasq and all your VMs will have access to the internet because libvirt will add the appropriate firewall rules with <code>iptables</code>. Also a DNS will be configured for you. VMs on the default network will not be able to communicate with each other by default. Because we are doing something more custom, and we want our VMs to be able to communicate to each other, we are going to setup networks of our own.</p>
+<p><em>Note</em> In this phase your VM will surely have an internet connection. Now is a great time to install all the software you think you will need. If you want to follow along your VMs will need: <code>nftables</code> and <code>conntrack</code> and <code>ncat</code> (any flavour of <code>ncat</code> will probably do).</p>
+<p>We are going to create bridge networks with <a href="https://netplan.io/">netplan</a>. With netplan you can configure your own networks in yaml files, and they will be created upon boot. Pretty nice. As the backend for netplan I am using networkd (instead of NetworkManager). According to the site you can also use NetworkManager as the backend.</p>
+<p>I recently switched from NetworkManager to networkd and I thought it would be painful, but it was not painful at all. Install networkd according to <a href="https://wiki.archlinux.org/title/systemd-networkd">instructions</a>. Start/enable the networkd service with <code>systemctl</code>. I connect to Wifi networks with <a href="https://wiki.archlinux.org/title/Iwd">iwd</a> using the <code>iwctl</code> command line tool.</p>
+<p>These are the two yaml file I used to define the two bridge network:</p>
+<pre><code class="language-yaml"><span class="hljs-attr">network:</span>
+  <span class="hljs-attr">version:</span> <span class="hljs-number">2</span>
+  <span class="hljs-attr">renderer:</span> <span class="hljs-string">networkd</span>
+  <span class="hljs-attr">ethernets:</span>
+    <span class="hljs-attr">enp0s3:</span>
+      <span class="hljs-attr">dhcp4:</span> <span class="hljs-literal">false</span>
+      <span class="hljs-attr">dhcp6:</span> <span class="hljs-literal">false</span>
+  <span class="hljs-attr">bridges:</span>
+    <span class="hljs-attr">br0:</span>
+      <span class="hljs-attr">interfaces:</span> [<span class="hljs-string">enp0s3</span>]
+      <span class="hljs-attr">addresses:</span> [<span class="hljs-number">192.168</span><span class="hljs-number">.111</span><span class="hljs-number">.1</span><span class="hljs-string">/24</span>]
+      <span class="hljs-attr">mtu:</span> <span class="hljs-number">1500</span>
+      <span class="hljs-attr">nameservers:</span>
+        <span class="hljs-attr">addresses:</span> [<span class="hljs-number">8.8</span><span class="hljs-number">.8</span><span class="hljs-number">.8</span>]
+      <span class="hljs-attr">parameters:</span>
+        <span class="hljs-attr">stp:</span> <span class="hljs-literal">true</span>
+        <span class="hljs-attr">forward-delay:</span> <span class="hljs-number">4</span>
+      <span class="hljs-attr">dhcp4:</span> <span class="hljs-literal">no</span>
+      <span class="hljs-attr">dhcp6:</span> <span class="hljs-literal">no</span>
+</code></pre>
+<pre><code class="language-yaml"><span class="hljs-attr">network:</span>
+  <span class="hljs-attr">version:</span> <span class="hljs-number">2</span>
+  <span class="hljs-attr">renderer:</span> <span class="hljs-string">networkd</span>
+  <span class="hljs-attr">ethernets:</span>
+    <span class="hljs-attr">enp0s4:</span>
+      <span class="hljs-attr">dhcp4:</span> <span class="hljs-literal">false</span>
+      <span class="hljs-attr">dhcp6:</span> <span class="hljs-literal">false</span>
+  <span class="hljs-attr">bridges:</span>
+    <span class="hljs-attr">br1:</span>
+      <span class="hljs-attr">interfaces:</span> [<span class="hljs-string">enp0s4</span>]
+      <span class="hljs-attr">addresses:</span> [<span class="hljs-number">192.168</span><span class="hljs-number">.222</span><span class="hljs-number">.1</span><span class="hljs-string">/24</span>]
+      <span class="hljs-attr">mtu:</span> <span class="hljs-number">1500</span>
+      <span class="hljs-attr">nameservers:</span>
+        <span class="hljs-attr">addresses:</span> [<span class="hljs-number">8.8</span><span class="hljs-number">.8</span><span class="hljs-number">.8</span>]
+      <span class="hljs-attr">parameters:</span>
+        <span class="hljs-attr">stp:</span> <span class="hljs-literal">true</span>
+        <span class="hljs-attr">forward-delay:</span> <span class="hljs-number">4</span>
+      <span class="hljs-attr">dhcp4:</span> <span class="hljs-literal">no</span>
+      <span class="hljs-attr">dhcp6:</span> <span class="hljs-literal">no</span>
+</code></pre>
+<p>A bridge network is a virtual switch that you can virtually plug VMs into. These 2 yamls create 2 bridge interfaces: <code>br0</code> and <code>br1</code>.
+<code>br0</code> will have ip address 192.168.111.1 and <code>br1</code> will have ip address 192.168.222.1. I have not checked out netplan in great detail, so maybe you could do this a lot simpler. You can check their some other examples <a href="https://netplan.io/examples/">here</a>.</p>
+<p>These yamls files you can put in <code>/etc/netplan</code> and they will be processed upon boot. Or you can apply them with <code>netplan apply &lt;path-to-yaml&gt;</code>.</p>
+<p>Now you need to configure the VMs that you created with libvirt to use these networks, instead of the default network. You can do that with:
+<code>virsh edit &lt;name-of-VM&gt;</code>. You will be dropped into your default editor where you can change the settings of your VM that are stored in an xml file. Change the interface type to this:</p>
+<pre><code class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">interface</span> <span class="hljs-attr">type</span>=<span class="hljs-string">&#x27;bridge&#x27;</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">mac</span> <span class="hljs-attr">address</span>=<span class="hljs-string">&#x27;52:54:00:a1:1d:6d&#x27;</span>/&gt;</span> <span class="hljs-comment">&lt;!-- Choose a unique mac address --&gt;</span> 
+  <span class="hljs-tag">&lt;<span class="hljs-name">source</span> <span class="hljs-attr">bridge</span>=<span class="hljs-string">&#x27;br1&#x27;</span>/&gt;</span>             <span class="hljs-comment">&lt;!-- Change this to the bridge that your VM should use --&gt;</span> 
+  <span class="hljs-tag">&lt;<span class="hljs-name">model</span> <span class="hljs-attr">type</span>=<span class="hljs-string">&#x27;e1000&#x27;</span>/&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">address</span> <span class="hljs-attr">type</span>=<span class="hljs-string">&#x27;pci&#x27;</span> <span class="hljs-attr">domain</span>=<span class="hljs-string">&#x27;0x0000&#x27;</span> <span class="hljs-attr">bus</span>=<span class="hljs-string">&#x27;0x00&#x27;</span> <span class="hljs-attr">slot</span>=<span class="hljs-string">&#x27;0x03&#x27;</span> <span class="hljs-attr">function</span>=<span class="hljs-string">&#x27;0x0&#x27;</span>/&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">interface</span>&gt;</span>
+</code></pre>
+<p>You need to assign 2 of your VMs to <code>br0</code> and 2 to <code>br1</code>.</p>
+<h3>First steps in configuring networking on the VM  <a name="3.3"></a></h3>
+<p>We are going to configure a lot of networking stuff. Creating the whole setup at once might be a little too much, therefore, in this section we are going to configure 1 VM to use the bridge network <code>br0</code>, and make it so it has access to the internet. After this, you will probably appreciate all the things that libvirt is doing for you by default ;).</p>
+<p>When you log into one of your VMs with <code>virsh console &lt;name-of-VM&gt;</code>. You will have no access to the internet, your VM will not have an ip address, DNS won’t be configured and your host machine will not transfer packets from your VM to the internet.</p>
+<p>First make sure that packet forwarding is turned on your host machine do: <code>echo 1 &gt; /proc/sys/net/ipv4/ip_forward</code>. You can read more about it <a href="https://linuxconfig.org/how-to-turn-on-off-ip-forwarding-in-linux">here</a>. If you don’t turn this on, packets that are not meant for your machine will be dropped.</p>
+<p>On the VMs you should also configure a DNS server they can use to resolve domain names, I used the DNS provided by google located at <code>8.8.8.8</code>. Changing the file <code>/etc/resolv.conf</code> to contain the lines:</p>
+<pre><code>nameserver 8.8.8.8
+nameserver 8.8.4.4
+</code></pre>
+<p>Does the trick. Whenever you VM needs to resolve a domain name, it will first try <code>8.8.8.8</code> and will use <code>8.8.4.4</code> as a backup.</p>
+<p>The next step will be to configure an ip address for your VM. You can do that with <code>iproute2</code>. Check the status of current status of your machine with <code>ip a</code>. You can configure an ip address with:
+<code>ip address add 192.168.111.100/24 dev eth0</code></p>
+<p>The output of <code>ip a</code> should look something like this:</p>
+<pre><code>2: eth0: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 qdisc pfifo_fast state UP qlen 1000
+    link/ether 52:54:00:14:fe:ff brd ff:ff:ff:ff:ff:ff
+    inet 192.168.111.100/24 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::5054:ff:fe14:feff/64 scope link
+       valid_lft forever preferred_lft forever
+</code></pre>
+<p>The next thing we should do is to change the routes on the VM. You can check the known routes with <code>ip route</code>:</p>
+<pre><code>192.168.111.0/24 dev eth0 scope link  src 192.168.111.100
+</code></pre>
+<p>This means your VM now knows how to reach destinations on the network <code>192.168.111.0/24</code>. But in order to reach outside the network, we need to add a default route.
+This default route will be the default route for all packets not destined for other known networks. To add the default route do <code>ip route add default via 192.168.111.1 dev eth0</code>. The output of <code>ip route</code> will be:</p>
+<pre><code>default via 192.168.111.1 dev eth0
+192.168.111.0/24 dev eth0 scope link  src 192.168.111.100
+</code></pre>
+<p><code>192.168.111.1</code> Is the ip address of <code>br0</code> located on our host machine. A packet not destined for <code>192.168.111.0/24</code> will now go to <code>192.168.111.1</code>. The routing table on your host machine will determine where the packet should go next. Check the routing on your host machine also with <code>ip route</code>.</p>
+<p>Now for the last step, the host machine needs to be configured as a router. You can do that by changing your firewall settings with  <code>nftables</code> with this config:</p>
+<pre><code class="language-bash">flush ruleset
+
+table inet filter {
+	chain input {
+		<span class="hljs-built_in">type</span> filter hook input priority filter; policy accept;
+	}
+
+	chain forward {
+		<span class="hljs-built_in">type</span> filter hook forward priority filter; policy accept;
+	}
+
+	chain output {
+		<span class="hljs-built_in">type</span> filter hook output priority filter; policy accept;
+	}
+}
+
+table inet nat {
+	chain postrouting {
+		<span class="hljs-built_in">type</span> nat hook postrouting priority srcnat; policy accept;
+		ip saddr 192.168.111.0/24 counter masquerade
+		ip saddr 192.168.222.0/24 counter masquerade
+	}
+}
+</code></pre>
+<p>This “firewall” has no filter rules, it will accept anything. Packets not meant for the host machine will be processed by <code>postrouting</code>.
+The line <code>ip saddr 192.168.111.0/24 counter masquerade</code> says, if the source ip is any ip from the network <code>192.168.111.0/24</code>, change it to the source address of the <em>outgoing</em> interface (meaning, make it seem as that packet came from the host). This is needed so the NAT device from your ISP thinks it is the host machine is sending the packets. In my case, without this step, packets were not processed by my NAT device. You can apply this “firewall” with <code>nft -f &lt;path-to-file&gt;</code>.</p>
+<p>Now you should be able to <code>curl</code>, <code>ping</code>, download packages, etc.</p>
+<p>Lets recap what we have done:</p>
+<ul>
+<li>Configured packet forwarding</li>
+<li>Configured a nameserver</li>
+<li>Configured the ip address</li>
+<li>Configured the ip routes</li>
+<li>Configured the host machine to be a router</li>
+</ul>
+<p>Graphically we have made this:</p>
+<p style="text-align:center;">
+    <img src="/vmhostrouter.svg" width="600">
+</p>
+<p><em>Disclaimer</em>: You can probably do this more efficient, but this is a very specific setup for learning purposes anyway, so it does not matter.</p>
+<h3>Simulate 2 clients behind NAT devices  <a name="3.4"></a></h3>
+<p>We can expand upon the steps in the previous paragraph to create the setup so we can perform the hole punching we are after 2 clients behind NAT devices.</p>
+<p>This is the setup we are going to create:</p>
+<p style="text-align:center;">
+    <img src="/vmrouterhostroutervm.svg" width="800">
+</p>
+<p>Start the 4 VMs you have created. I assumed you have configured 2 VM to be using <code>br0</code> and 2 <code>br1</code>.</p>
+<h4>Assign the VM ip addresses and configure the routes  <a name="3.4.1"></a></h4>
+<p>First we are going to give all the VM ip addresses and routes.</p>
+<ul>
+<li>On the NAT A VM run:</li>
+</ul>
+<pre><code class="language-bash">ip address add 192.168.111.101/24 dev eth0
+ip route add default via 192.168.111.1 dev eth0
+</code></pre>
+<p>Make sure to turn on packet forwarding (<code>echo 1 &gt; /proc/sys/net/ipv4/ip_forward</code>)</p>
+<ul>
+<li>On the NAT B VM run:</li>
+</ul>
+<pre><code class="language-bash">ip address add 192.168.222.101/24 dev eth0
+ip route add default via 192.168.222.1 dev eth0
+</code></pre>
+<p>Make sure to turn on packet forwarding (<code>echo 1 &gt; /proc/sys/net/ipv4/ip_forward</code>)</p>
+<ul>
+<li>On the client A VM run:</li>
+</ul>
+<pre><code class="language-bash">ip address add 192.168.111.100/24 dev eth0
+ip route add default via 192.168.111.101 dev eth0
+ip route del 192.168.111.0/24 dev eth0 <span class="hljs-comment"># Upon assigning an ip in the first command this route is automatically created, delete this route manually, we want all traffic to go through our NAT VM</span>
+</code></pre>
+<ul>
+<li>On the client B VM run:</li>
+</ul>
+<pre><code class="language-bash">ip address add 192.168.222.100/24 dev eth0
+ip route add default via 192.168.222.101 dev eth0
+ip route del 192.168.222.0/24 dev eth0
+</code></pre>
+<h4>Configure firewalls for the clients <a name="3.4.2"></a></h4>
+<p>Next we are going to configure the firewalls on the client VMs.
+On the client A and B VMs apply the following very simple firewall:</p>
+<pre><code class="language-bash">flush ruleset
+
+table ip filter {
+	chain input {
+		<span class="hljs-built_in">type</span> filter hook input priority 0; policy drop;
+		ct state invalid counter drop comment <span class="hljs-string">&quot;early drop invalid packets, if connection tracking state is invalid&quot;</span>
+		ct state {established, related} counter accept comment <span class="hljs-string">&quot;accept all connections related to connections made by us&quot;</span>
+		iif lo accept comment <span class="hljs-string">&quot;accept loopback&quot;</span>
+		iif != lo ip daddr 127.0.0.1/8 counter drop comment <span class="hljs-string">&quot;drop connections to loopback not coming from loopback&quot;</span>
+		tcp dport 22 counter accept comment <span class="hljs-string">&quot;accept SSH&quot;</span>
+		counter comment <span class="hljs-string">&quot;count dropped packets&quot;</span>
+	}
+	chain forward {
+		<span class="hljs-built_in">type</span> filter hook forward priority 0; policy drop;
+		counter comment <span class="hljs-string">&quot;count dropped packets&quot;</span>
+	}
+	chain output {
+		<span class="hljs-built_in">type</span> filter hook output priority 0; policy accept;
+		counter comment <span class="hljs-string">&quot;count accepted packets&quot;</span>
+	}
+}
+</code></pre>
+<p>You can apply this firewall with <code>nft -f &lt;name-of-the-file&gt;</code>. So how does this work. Whenever a packets enters an interface it is processed by <a href="https://en.wikipedia.org/wiki/Netfilter">netfilter</a> in the linux kernel. Depending on the packet it traverses a set of chains, and in each chain you can define a set of rules specifying what should happen to the packet. I highly recommand you check out the <a href="https://wiki.nftables.org/wiki-nftables/index.php/Netfilter_hooks">packet flow</a> diagram in the nftables documentation, it is really helpful. It will give you an idea in what order packets will traverse different chains.</p>
+<p>So lets take this firewall as an example, I defined the table “filter” containing chains that  work on all packets from the “ip” family (IPv4). In this table I defined a chain called “input” and its of type filter with the input hook. This means, all IPv4 packets that are destined for the local machine, will be processed by this chain. If no rule is triggerd, the packet will be dropped (policy drop).
+If the connection state is invalid (whatever this means) the packet will be dropped. If the connection state is established or related, the packet will be accepted. If there is tcp traffic on port 22 it will be accepted. If no rule was triggered, the packet will be dropped.</p>
+<p>The counter statement is very handy, it creates a counter that counts packets and bytes. You can do <code>nft list ruleset</code> which prints out the current rules that are active, and it also shows the updated counters. The counters will show you the number of packets and bytes that the rule triggered, which is very useful to see if your rules are working. For example if you are trying to connect through ssh, but you see that the ssh counter remains 0. You know your tcp packets on port 22 are not being triggered by the rule.</p>
+<h4>Configure the router VMs  <a name="3.4.3"></a></h4>
+<p>On the NAT A and B VMs apply the following nftable rules:</p>
+<pre><code class="language-bash">flush ruleset
+
+table inet filter {
+   chain input {
+        <span class="hljs-built_in">type</span> filter hook input priority 0; policy drop;
+        ct state invalid counter drop 
+        ct state {established, related} counter 
+        counter comment <span class="hljs-string">&quot;count dropped packets&quot;</span>
+   }
+    chain forward {
+        <span class="hljs-built_in">type</span> filter hook forward priority 0; policy drop;
+        oif eth0 ct state invalid counter drop 
+        oif eth0 ct state {new, established, related} counter accept 
+        counter comment <span class="hljs-string">&quot;count dropped packets&quot;</span>
+    }
+    chain output {
+        <span class="hljs-built_in">type</span> filter hook output priority 0; policy accept;
+    }
+}
+
+
+table inet nat {
+    chain postrouting {
+        <span class="hljs-built_in">type</span> nat hook postrouting priority srcnat;
+        oifname <span class="hljs-string">&quot;eth0&quot;</span> counter masquerade comment <span class="hljs-string">&quot;this is where the NAT happens&quot;</span>
+    }
+    chain prerouting {
+        <span class="hljs-built_in">type</span> nat hook prerouting priority -100; policy accept;
+        <span class="hljs-comment"># depending on what router VM change the ip address: either 192.168.222.100 or192.168.111.100  </span>
+        tcp dport { 22 } counter dnat ip to 192.168.222.100
+    }
+}
+</code></pre>
+<p>Lets break this down (its very helpful to check the <a href="https://wiki.nftables.org/wiki-nftables/index.php/Netfilter_hooks">packet flow</a>).
+Whenever a packet arrives at an interface it is processed by the prerouting chain: all packets are accepted, whenever a tcp packet arrives on port 22
+the destination address of that packet is changed to <code>192.168.222.100</code> (this is port forwarding, so ssh connection attempts do reach the client).
+If a packet is not meant for a local process it goes to the forward chain, to be forwarded to the next location.
+In the forward chain packets are accepted if the output interface is “eth0” and if the connection state is new, established or related.
+Afer the forward chain packets will go to the postrouting chain.
+If the output interface is “eth0”, I quote, the source address is automagically set to the ip of the output interface.
+This is where the actual network address is translated.</p>
+<h3>Try holepunching! <a name="3.5"></a></h3>
+<p>With these configurations in place it is time to holepunch! Now you can hole punch just like in Engineer Mans video.</p>
+<p style="text-align:center;">
+    <img src="/holepunchsetup.png" width="800">
+</p>
+<p>This is an example of UDP holepunching. You can send UPD packets with ncat and control the source port numbers.
+Do not forget to turn off the firewall on your host machine <code>nft flush ruleset</code>. On reboot your firewall will be back. And turn on packet forwarding.</p>
+<p>To track the connections table on the NAT VM. I run the command <code>watch -n 1 conntrack watch -n 1 conntrack -L -p UDP</code>.
+You can see the hole punching happening! And you can use it to diagnose when something is wrong.</p>
+<p>This to do with this setup:</p>
+<ul>
+<li>Now you can tryout different NAT scenario’s check the nftables documentation!</li>
+<li>You can tryout TCP holepunching.</li>
+<li>You can use this as a simulation setup to try out communication over NAT.</li>
+<li>You can experiment with <code>nftables</code></li>
+<li>Tryout firewall settings</li>
+<li>Install <code>tshark</code> and inspect your network traffic</li>
+</ul>
+</div>
+        </div>
+    </div>
+</div>
+
+
+</body>
+</html>
+
+
