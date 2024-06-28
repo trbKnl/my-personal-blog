@@ -4,8 +4,5 @@ python3 ./generate_metadata.py
 # Generate static html pages
 node ./generate_html.js
 
-# Copy the qemu-arm-static over here so it can be compiled on my workstation
-cp /bin/qemu-arm-static .
-
-# Install the packages check if binfmt_misc support is running running
-systemctl status systemd-binfmt
+# build for arm
+docker buildx build --platform linux/arm/v7 -t docker.niekdeschipper.com/website:latest --push .
