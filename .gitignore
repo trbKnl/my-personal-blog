@@ -1,3 +1,4 @@
 qemu-arm-static
 node_modules/*
 node_modules
+projects/*

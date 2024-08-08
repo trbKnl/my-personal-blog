@@ -22,9 +22,9 @@ let md = require("markdown-it")({
 
 
 // Read blogs and render to html
-const rawBlogDirectory  = process.cwd() + "/blogs/" 
-const renderedBlogDirectory = process.cwd() + "/projects/" 
-const templatePath = process.cwd() + "/views/blog.ejs" 
+const rawBlogDirectory  = process.cwd() + "/../blogs/" 
+const renderedBlogDirectory = process.cwd() + "/../projects/" 
+const templatePath = process.cwd() + "/../views/blog.ejs" 
 const template = fs.readFileSync(templatePath, 'utf-8');
 
 fs.readdir(rawBlogDirectory, (err, files) => {
@@ -49,7 +49,7 @@ fs.readdir(rawBlogDirectory, (err, files) => {
 
     // write html to renderedBlogDirectory
     const filename = path.basename(file, path.extname(file)) + ".html"
-    const filePath = renderedBlogDirectory + "/" + filename
+    const filePath = renderedBlogDirectory + filename
 
     fs.writeFile(filePath, htmlBlog, 'utf8', (err) => {
       if (err) {
