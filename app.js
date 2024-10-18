@@ -18,7 +18,7 @@ app.use("/projects", express.static(__dirname + '/projects'));
 app.use("/rss", express.static(__dirname + '/rss'));
 
 // read in the metadata file to display the blog posts
-var metadata = JSON.parse(fs.readFileSync('./scripts/blogmetadata.json', 'utf8'));
+var metadata = JSON.parse(fs.readFileSync('./blogmetadata.json', 'utf8'));
 
 app.get('/', (req, res) => {
     res.render('index', {

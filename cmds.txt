@@ -1,8 +1,2 @@
-# Add metadata before packaging
-python3 ./generate_metadata.py
-
-# Generate static html pages
-node ./generate_html.js
-
 # build for arm
 docker buildx build --platform linux/arm/v7 -t docker.niekdeschipper.com/website:latest --push .

@@ -1,13 +1,16 @@
 import os
-import re
+from pathlib import Path
 from datetime import datetime, timezone
 import json
+import traceback
 
 import markdown2
 from feedgen.feed import FeedGenerator
 
-BLOGDIRECTORY = "../blogs"
-RSSDIRECTORY = "../rss"
+CURRENT_DIR = Path(__file__).resolve().parent
+BLOG_DIRECTORY = CURRENT_DIR / "../blogs"
+RSS_DIRECTORY = CURRENT_DIR / "../rss"
+BLOG_METADATA_DIRECTORY = CURRENT_DIR / ".."
 FG = FeedGenerator()
 
 # Set RSS feed metadata
@@ -46,39 +49,45 @@ def add_rss_entry(title, blog, description, pub_date):
 
 
 def generate_rss_feed():
-    path = os.path.join(RSSDIRECTORY, "rss.xml")
+    path = os.path.join(RSS_DIRECTORY, "rss.xml")
     FG.rss_file(path)
 
 
 def main():
-    dictout = {}
 
-    for blog in os.listdir(BLOGDIRECTORY):
-        mdfile = os.path.join(BLOGDIRECTORY, blog)
-        with open(mdfile) as f:
-            text = ''.join(f.readlines())
-            
-        # parsemarkdown
-        parsedmarkdown = markdown2.markdown(text, extras=["metadata"])
-        metadata = parsedmarkdown.metadata
-        dictout[blog] = metadata
-        print(metadata)
+    try:
+        dictout = {}
+
+        for blog in os.listdir(BLOG_DIRECTORY):
+            mdfile = os.path.join(BLOG_DIRECTORY, blog)
+            with open(mdfile) as f:
+                text = ''.join(f.readlines())
+                
+            # parsemarkdown
+            parsedmarkdown = markdown2.markdown(text, extras=["metadata"])
+            metadata = parsedmarkdown.metadata
+            dictout[blog] = metadata
+
+        # sort by time and change extension
+        blogmetadata = {change_file_extension(k, "html"): v for k, v in sorted(dictout.items(), key=lambda item: item[1]['date'], reverse = True)}
+
+        with open(BLOG_METADATA_DIRECTORY / "blogmetadata.json", 'w') as fp:
+            json.dump(blogmetadata, fp)
 
 
-    # sort by time and change extension
-    blogmetadata = {change_file_extension(k, "html"): v for k, v in sorted(dictout.items(), key=lambda item: item[1]['date'], reverse = True)}
+        # Create rss feed for last 10 articles
+        metadata_list = [(blog, metadata) for blog, metadata in blogmetadata.items()]
+        last_10_entries = metadata_list[:10]
+        for blog, metadata in last_10_entries:
+            add_rss_entry(metadata["title"], blog, metadata["description"], metadata["date"])
+            generate_rss_feed()
 
-    with open('blogmetadata.json', 'w') as fp:
-        json.dump(blogmetadata, fp)
+        print("meta data and rss feed created")
 
-    # Create rss feed for last 10 articles
-    metadata_list = [(blog, metadata) for blog, metadata in blogmetadata.items()]
-    last_10_entries = metadata_list[:10]
-    for blog, metadata in last_10_entries:
-        add_rss_entry(metadata["title"], blog, metadata["description"], metadata["date"])
-        generate_rss_feed()
+    except Exception as e:
+        traceback.print_exc()
+        print(f"No metadata and rss feed got generated: {e}")
 
 
 if __name__ == "__main__":
     main()
-

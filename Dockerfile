@@ -1,23 +1,27 @@
-FROM arm32v7/node
+FROM node:21
 
-# Create app directory
-WORKDIR /usr/src/app
+# Install Python and pip
+RUN apt-get update && \
+    apt-get install -y python3-venv python3-pip
 
-# Install app dependencies
-# A wildcard is used to ensure both package.json AND package-lock.json are copied
-# where available (npm@5+)
+# Set working directory
+WORKDIR /app
+
+# Create a virtual environment
+RUN python3 -m venv venv
+
+RUN . venv/bin/activate && pip install markdown2 feedgen
+
 COPY package*.json ./
+RUN npm i --only=production
 
-# RUN npm install
-# If you are building your code for production
-RUN npm ci --only=production
-
-# Bundle app source
 COPY . .
 
-# set NODE_ENV
+RUN . venv/bin/activate && npm run build
+
 ENV NODE_ENV=production
 
 EXPOSE 8080
-CMD [ "node", "app.js" ]
+
+CMD ["npm", "run", "start"]
 

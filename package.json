@@ -1,23 +1,26 @@
 {
-  "name": "expresscourse",
-  "version": "1.0.0",
+  "name": "personal website",
+  "version": "6.6.6",
   "description": "",
   "main": "index.js",
   "scripts": {
     "start": "node app.js",
-    "dev": "nodemon app.js"
+    "dev": "concurrently \"node app.js\" \"node ./scripts/watcher.js\"",
+    "build": "node ./scripts/generate_html.js && python3 ./scripts/generate_metadata.py"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "bootstrap": "^5.0.0-beta2",
+    "chokidar": "^4.0.1",
     "compression": "^1.7.4",
+    "concurrently": "^9.0.1",
     "ejs": "^3.1.6",
     "express": "^4.17.1",
     "gray-matter": "^4.0.2",
     "highlight.js": "^11.3.1",
-    "markdown-it": "^12.0.4"
+    "markdown-it": "^14.1.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.7"

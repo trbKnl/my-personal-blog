@@ -1,2 +1,0 @@
-" replace all spaces within quotes with '-'
-%s/id="[^"]*"/\=substitute(submatch(0), ' ', '-', 'g')/gc
