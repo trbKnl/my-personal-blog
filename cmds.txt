@@ -1,2 +1,2 @@
-# build for arm
-docker buildx build --platform linux/arm/v7 -t docker.niekdeschipper.com/website:latest --push .
+# build for arm32/v7
+docker buildx build --platform linux/arm/v7 -t docker.niekdeschipper.com/website:latest .

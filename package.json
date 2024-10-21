@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node app.js",
     "dev": "concurrently \"node app.js\" \"node ./scripts/watcher.js\"",
-    "build": "node ./scripts/generate_html.js && python3 ./scripts/generate_metadata.py"
+    "build": "npm run build:html && npm run build:metadata",
+    "build:html": "node ./scripts/generate_html.js",
+    "build:metadata": "python3 ./scripts/generate_metadata.py"
   },
   "keywords": [],
   "author": "",

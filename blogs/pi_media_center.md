@@ -1,7 +1,7 @@
 ---
 title: Turn your dumb TV into a smart TV
 date: 2024-10-16
-description: Learn how to configure a Raspberry PI 5 as a tv media center
+description: Learn how to configure a Raspberry Pi 5 as a tv media center
 ---
 
 <style type="text/css">
@@ -14,9 +14,9 @@ td {
 }
 </style>
 
-<!--<p style="text-align:center;">-->
-<!--    <img src="/ctf_flag.jpeg" width="300" class="center">-->
-<!--</p>-->
+<p style="text-align:center;">
+    <img src="/pi_media_pc_small.jpg" width="300" class="center">
+</p>
 
 <h2 class="border-bottom mb-3 mt-5">Content in this Blog Post</h2>
 
@@ -53,6 +53,8 @@ For this project, I used the following hardware:
 * [Raspberry Pi SD Card Switcher](https://nl.aliexpress.com/item/1005005962679513.html?gatewayAdapt=glo2nld): This allows you to flip a switch to use a different SD card rather than physically swapping them out, convenient.
 
 * Samsung SSD 1TB: I’ve had this for a while; I chose it for its fast read and write speeds, which are important
+
+* Micro HDMI to HDMI: The Raspberry Pi does not have a fullsize HDMI port but a micro HDMI port. So you need a HDMI to micro HDMI cable to hook it up to a screen.
 
 
 <h2 class="border-bottom mb-3 mt-5">Software</h2>
