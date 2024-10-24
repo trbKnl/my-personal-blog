@@ -101,6 +101,6 @@ If you end up going this route, you will end up with a very capable, really smal
 
 Would I recommend this as a solution to upgrade your crappy TV. Probably not, all the components together are quite expensive and given the existence of Widevine you are better off buying a new TV, which is sad.
 
-But if you like to have a media PC attached to your PC anyway and were looking at Intel NUC's
+But if you like to have a media PC attached to your PC anyway and were looking at Intel NUC's this is good and cheaper alternative.
 
 
