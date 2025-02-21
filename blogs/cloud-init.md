@@ -4,7 +4,10 @@ date: 2023-01-26
 description: Test your Cloud-init configuration before deploying to the cloud
 ---
 
+## At the bottom you can find the 2025-02 update of this article
+
 <h2 class="border-bottom mb-3 mt-5">Goal of this blog post</h2>
+
 
 In this blog post I will outline the steps you can take to create a local testing setup to initialize images with Cloud-init.
 
@@ -175,3 +178,77 @@ Some Commands I found useful:
 
 - Check the syntax of your `user-data` file with: `cloud-init schema --config-file user-data`
 - Check whether cloud-init is finished running: `cloud-init status --wait`. This is especially useful when deploying in the actual cloud. Ssh into your VM and run that command and see whether Cloud-init is finished or still running.
+
+
+## 2025-2 update
+
+Using qemu directly can be a struggle, I don't really use qemu directly anymore, but I often vind myself creating VMs for testing. The following procedure uses virt-manager and is easier to use:
+
+
+1. Create user-data file so cloud-init provisions the VM
+2. Create the install image using the commands in the old article
+2. `virt-install` the VM 
+3. `virt-manager` to start the VM, or log into the console
+4. Get the IP of the VM and login with ssh
+
+### Step 1: Create `user-data`
+
+```bash
+#cloud-config
+
+# user-data
+# put whatever you need here
+hostname: test
+users:
+  - name: turbo
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: users, admin
+    home: /home/myuser
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - ssh-rsa  your key
+password: password
+chpasswd: { expire: False }
+ssh_pwauth: True
+package_upgrade: true
+```
+
+###  Step 2: Create the install image
+
+```bash
+cp jammy-server-cloudimg-amd64.img fresh.img && 
+qemu-img convert -O qcow2 fresh.img fresh.qcow2 && 
+qemu-img resize fresh.qcow2 +10G
+```
+
+For the details read the original article
+
+### Step 3: Install the VM using `virt-install`
+
+```bash
+virt-install \
+  --name test \
+  --memory 2048 \
+  --vcpus 2 \
+  --os-variant ubuntu22.04 \
+  --network bridge=virbr0,model=virtio \
+  --graphics none \
+  --disk fresh.qcow2,format=qcow2,bus=virtio \
+  --cloud-init user-data=user-data \
+  --virt-type kvm \
+  --noautoconsole
+```
+
+### Step 4: Open `virt-manager`
+
+Check installation progress in `virt-manager`
+
+### Step 5: Get IP of newly created VM 
+
+`virsh net-dhcp-leases default`
+
+
+### Step 6: Win
+
+You won
+
