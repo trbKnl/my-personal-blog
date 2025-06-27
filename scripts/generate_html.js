@@ -51,6 +51,7 @@ function renderMarkdown(file) {
 const projectRoot = __dirname // equal to where the script is located
 const rawBlogDirectory  = projectRoot + "/../blogs/" 
 const renderedBlogDirectory = projectRoot + "/../projects/" 
+fs.mkdirSync(renderedBlogDirectory, { recursive: true }); // make sure folder exists
 const templatePath = projectRoot + "/../views/blog.ejs" 
 
 const template = fs.readFileSync(templatePath, 'utf-8'); // read template
