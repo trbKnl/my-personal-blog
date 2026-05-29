@@ -1,0 +1,94 @@
+/* Overlay */
+#game-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9000;
+  overflow: hidden;
+}
+
+/* House */
+#game-house {
+  position: absolute;
+  bottom: 0;
+  left: 20px;
+  height: 80px;
+  width: auto;
+  pointer-events: auto;
+  cursor: pointer;
+  z-index: 9001;
+}
+
+/* Animals and detonator */
+.game-sprite {
+  position: absolute;
+  height: 60px;
+  width: auto;
+  pointer-events: auto;
+  cursor: pointer;
+  z-index: 9002;
+  transform-origin: center bottom;
+}
+
+/* Confetti squares */
+.confetti-square {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  pointer-events: none;
+  z-index: 9010;
+}
+
+/* Mobile toggle button */
+#game-toggle {
+  display: none;
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid #000;
+  background: #fff;
+  cursor: pointer;
+  z-index: 9100;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+#game-toggle::before {
+  content: '';
+  display: block;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 9px 0 9px 16px;
+  border-color: transparent transparent transparent #000;
+  margin-left: 3px;
+  transition: border-color 0.15s;
+}
+
+#game-toggle.game-active {
+  background: #000;
+}
+
+#game-toggle.game-active::before {
+  border-color: transparent transparent transparent #fff;
+}
+
+@media (max-width: 768px) {
+  #game-toggle {
+    display: flex;
+  }
+
+  #game-overlay:not(.game-visible) {
+    display: none;
+  }
+
+  #game-overlay.game-visible {
+    pointer-events: auto;
+    background: rgba(255, 255, 255, 0.96);
+    transition: background 0.2s;
+  }
+}

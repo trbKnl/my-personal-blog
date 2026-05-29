@@ -6,6 +6,7 @@
 	<title>Niek de Schipper</title>
     <link rel="stylesheet" href="bootstrap.min.css"/>
     <link rel="icon" type="image/png" href="/siteicon.png">
+    <link rel="stylesheet" href="/game/game.css">
 </head>
 <body>
 <div class="container">
@@ -44,7 +45,7 @@
                 <div class="card">
                     <div class="card-body">
                         <a href="<%= '/projects/'.concat(key) %>"><h5 class="card-title"><%= metadata[key].title %></h5></a>
-                        <h6 class="card-subtitle mb-2 text-muted"><%= metadata[key].date %></h6>
+                        <h6 class="card-subtitle mb-2 text-muted"><%= new Date(metadata[key].date).toISOString().slice(0, 10) %></h6>
                         <p class="card-text"><%= metadata[key].description %></p>
                     </div>
                 </div>
@@ -54,6 +55,8 @@
 
 
 </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script type="module" src="/game/game.js"></script>
 </body>
 </html>
 

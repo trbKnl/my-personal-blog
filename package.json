@@ -6,14 +6,13 @@
   "scripts": {
     "start": "node app.js",
     "dev": "concurrently \"node app.js\" \"node ./scripts/watcher.js\"",
-    "build": "npm run build:html && npm run build:metadata",
-    "build:html": "node ./scripts/generate_html.js",
-    "build:metadata": "python3 ./scripts/generate_metadata.py"
+    "build": "node ./scripts/build.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@popperjs/core": "^2.11.8",
     "bootstrap": "^5.0.0-beta2",
     "chokidar": "^4.0.1",
     "compression": "^1.7.4",

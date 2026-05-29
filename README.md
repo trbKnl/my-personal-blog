@@ -1,51 +1,52 @@
 # niekdeschipper.com
 
-My personal website made with Node, Express and EJS. It has a very simple content management system specifically tailored to my needs. For styling I used Bootstrap CSS.
-Basicially, this is a really constraint and inefficient static site generator. Which works perflectly fine!  
+Personal website / minimal static site generator. Write markdown in `blogs/`, get HTML out. Node.js only.
 
-It works as follows:
+## How it works
 
-1. I write blogs in markdown format it can be mixed with html when needed
-2. Metadata is read from the markdown files with and put into a json file this file is used to generate index.html
-3. Markdown is transformed into static html and is served by express
+1. Write blog posts as markdown in `blogs/` (with YAML front matter)
+2. `npm run build` converts them to HTML in `projects/`, and generates `blogmetadata.json` + `rss/rss.xml`
+3. Express serves the static files and renders the homepage from the metadata
 
-# Installation
-
-## Python
-
-Install python dependencies:
-
-```
-markdown2
-feedgen
-```
-
-Install them globally or use a virtual environment.
-
-
-## Node
+## Setup
 
 ```
 npm install
 ```
 
+## Usage
 
-# Usage
-
-
-To run the development server
-
-```
-npm run dev
+```bash
+npm run dev    # Express server + file watcher (auto-rebuilds on changes)
+npm run build  # Build all posts, metadata, and RSS feed
+npm start      # Just run the server
 ```
 
-To build the blog
+## Docker
 
+```bash
+# Build the image
+docker build -t website .
+
+# Run the container
+docker run -p 8080:8080 website
+
+# Build and run with a custom tag
+docker build -t website:latest . && docker run --rm -p 8080:8080 website:latest
 ```
-npm run build
+
+The site will be available at http://localhost:8080.
+
+## Writing a post
+
+Create `blogs/my-post.md`:
+
+```markdown
+---
+title: My Post Title
+date: 2025-01-01
+description: Short description shown on the homepage
+---
+
+Content here. Markdown and raw HTML both work.
 ```
-
-### Use this blog for yourself
-
-If you want to use this blog for yourself, remove the blogs in `./blog` and put in your own.
-
