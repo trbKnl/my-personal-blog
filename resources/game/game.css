@@ -43,10 +43,10 @@
 #game-toggle {
   display: none;
   position: fixed;
-  bottom: 16px;
+  bottom: max(16px, env(safe-area-inset-bottom, 0px) + 8px);
   right: 16px;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   border: 2px solid #000;
   background: #fff;
@@ -55,6 +55,9 @@
   align-items: center;
   justify-content: center;
   transition: background 0.15s;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 #game-toggle::before {
@@ -63,9 +66,9 @@
   width: 0;
   height: 0;
   border-style: solid;
-  border-width: 9px 0 9px 16px;
+  border-width: 10px 0 10px 18px;
   border-color: transparent transparent transparent #000;
-  margin-left: 3px;
+  margin-left: 4px;
   transition: border-color 0.15s;
 }
 
