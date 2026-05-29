@@ -1,15 +1,11 @@
 // MS Paint style confetti: hard-edged colored squares, no blur or shadows.
 // x, y are viewport-relative coordinates (use getBoundingClientRect() center).
-// Relies on global `gsap` loaded via CDN.
+import gsap from 'gsap'
 
 const COLORS = ['#FF0000', '#FFFF00', '#0000FF', '#008000', '#FFFFFF', '#000000']
 const SQUARE_SIZE = 8
 const COUNT_MIN = 20
 const COUNT_MAX = 30
-
-if (typeof gsap === 'undefined') {
-  throw new Error('confetti.js requires GSAP global. Load gsap CDN script before this module.')
-}
 
 export function spawnConfetti(x, y, overlay) {
   const count = COUNT_MIN + Math.floor(Math.random() * (COUNT_MAX - COUNT_MIN + 1))

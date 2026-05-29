@@ -1,20 +1,15 @@
+import gsap from 'gsap'
 import {
   createState, canSpawn, onSpawn, onPop,
   onDetonatorSpawn, onDetonatorPop, isRoundOver, resetRound
 } from './state.js'
 import { spawnAndWalk } from './movement.js'
 import { spawnConfetti } from './confetti.js'
-import { spawnSword } from './sword.js'
-
-if (typeof gsap === 'undefined') {
-  throw new Error('game.js requires GSAP global. Load gsap CDN script before this module.')
-}
 
 // --- State ---
 const state = createState()
 const animals = []      // { id, element, tweens: { walk, waddle } }
 let detonator = null    // { element, tweens: { walk, waddle } }
-let sword = null
 let nextId = 0
 
 // --- Overlay ---
@@ -91,21 +86,10 @@ function handleAnimalClick(id) {
   animals.splice(idx, 1)
   onPop(state)
 
-  // If sword is active it manages round-clear — skip auto-reset
-  if (sword) return
-
   if (isRoundOver(state)) {
     clearDetonatorIfPresent()
     resetRound(state)
   }
-}
-
-// --- Remove animal without round-reset (used by sword) ---
-function removeAnimalNoReset(id) {
-  const idx = animals.findIndex(a => a.id === id)
-  if (idx === -1) return
-  animals.splice(idx, 1)
-  onPop(state)
 }
 
 // --- Detonator ---
@@ -124,9 +108,6 @@ function spawnDetonatorSprite() {
   detonator = { element: el, tweens }
 
   el.addEventListener('click', handleDetonatorClick)
-
-  // Spawn sword 1.5s after detonator starts walking out
-  setTimeout(spawnSwordSprite, 600)
 }
 
 function handleDetonatorClick() {
@@ -134,21 +115,7 @@ function handleDetonatorClick() {
   massPopAnimals()
   popDetonatorElement()
   onDetonatorPop(state)
-
-  if (sword) {
-    sword.fallAndRemove()  // sword handles resetRound via onSwordGone
-  } else {
-    resetRound(state)
-  }
-}
-
-// --- Sword triggers this when it slices the detonator ---
-// Animals are NOT blown up — sword can continue slicing them individually.
-function triggerDetonatorFromSword() {
-  if (!detonator) return
-  popDetonatorElement()
-  state.detonatorOut = false
-  // sword.js calls checkRoundClear after this; sword falls only when animals are also gone
+  resetRound(state)
 }
 
 function massPopAnimals() {
@@ -171,21 +138,6 @@ function popDetonatorElement() {
   if (detonator.tweens.waddle) detonator.tweens.waddle.kill()
   detonator.element.remove()
   detonator = null
-}
-
-// --- Sword ---
-function spawnSwordSprite() {
-  sword = spawnSword(overlay, house, {
-    getAnimals: () => animals,
-    removeAnimal: removeAnimalNoReset,
-    getDetonator: () => detonator,
-    triggerDetonator: triggerDetonatorFromSword,
-    spawnConfetti: (x, y) => spawnConfetti(x, y, overlay),
-    onSwordGone: () => {
-      sword = null
-      resetRound(state)
-    },
-  })
 }
 
 function clearDetonatorIfPresent() {

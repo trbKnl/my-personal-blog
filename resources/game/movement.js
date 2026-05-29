@@ -1,5 +1,5 @@
 // Two-phase GSAP walk: emerge from house door growing to full size, then roam to random spot.
-// Relies on global `gsap` loaded via CDN before this module.
+import gsap from 'gsap'
 
 const HOUSE_SAFE_ZONE = {
   maxLeft: 220,  // house left (20px) + house width (80px) + emergence buffer (120px)
@@ -10,10 +10,6 @@ const WALK_SPEED_MAX = 350   // px per second (fastest)
 const EMERGE_DISTANCE = 300  // px to walk right before roaming
 const SPRITE_SIZE = 60       // sprite dimensions in px (used for spawn bounds)
 const EMERGE_START_SCALE = 0.15  // start at door size, grow to 1 during emergence
-
-if (typeof gsap === 'undefined') {
-  throw new Error('movement.js requires GSAP global. Load gsap CDN script before this module.')
-}
 
 export function spawnAndWalk(element, overlay, startX, startY) {
   element.style.left = startX + 'px'
