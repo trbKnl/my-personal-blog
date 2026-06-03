@@ -128,34 +128,22 @@ function setupKeyboard(craftTarget) {
 }
 
 function setupTouch(canvas, craftTarget) {
-  let touchStart = null
+  const MAX = 3.0
 
-  function onTouchStart(e) {
-    e.preventDefault()
-    touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY }
-  }
   function onTouchMove(e) {
     e.preventDefault()
-    if (!touchStart) return
-    const MAX = 3.0
-    craftTarget.x = Math.max(-MAX, Math.min(MAX, (e.touches[0].clientX - touchStart.x) / 80))
-    craftTarget.y = Math.max(-MAX, Math.min(MAX, -(e.touches[0].clientY - touchStart.y) / 80))
-  }
-  function onTouchEnd() {
-    touchStart = null
-    craftTarget.x = 0
-    craftTarget.y = 0
+    // Map touch position across the screen to craft offset range [-MAX, MAX]
+    const tx = e.touches[0].clientX / canvas.width  * 2 - 1   // -1 to 1
+    const ty = e.touches[0].clientY / canvas.height * 2 - 1   // -1 to 1
+    craftTarget.x =  tx * MAX
+    craftTarget.y = -ty * MAX
   }
 
-  canvas.addEventListener('touchstart', onTouchStart, { passive: false })
-  canvas.addEventListener('touchmove',  onTouchMove,  { passive: false })
-  canvas.addEventListener('touchend',   onTouchEnd)
+  canvas.addEventListener('touchmove', onTouchMove, { passive: false })
 
   return {
     cleanup() {
-      canvas.removeEventListener('touchstart', onTouchStart)
-      canvas.removeEventListener('touchmove',  onTouchMove)
-      canvas.removeEventListener('touchend',   onTouchEnd)
+      canvas.removeEventListener('touchmove', onTouchMove)
     },
   }
 }
@@ -204,7 +192,7 @@ function spawnConfetti3D(position, scene, forwardDir) {
   }
 }
 
-function spawnTunnelAnimals(path, scene) {
+function spawnTunnelAnimals(path, scene, tunnelRadius) {
   const loader  = new THREE.TextureLoader()
   const texNorm = loader.load('/game/assets/animal.svg')
   const texFlip = texNorm.clone()
@@ -222,7 +210,8 @@ function spawnTunnelAnimals(path, scene) {
     const t     = 0.15 + Math.random() * 0.75
     const pos   = path.getPoint(t)
     const angle = Math.random() * Math.PI * 2
-    const r     = 0.8 + Math.random() * 3.2   // stays well inside radius 5 wall
+    const maxR  = tunnelRadius - 1.2           // leave room for sprite half-width
+    const r     = 0.4 + Math.random() * (maxR - 0.4)
 
     // Offset along local normal/binormal instead of world X/Y
     const fi = Math.round(t * FRAME_SAMPLES)
@@ -481,7 +470,7 @@ export function startTunnelSequence(onComplete) {
   runIntroPhase(refs, canvas, () => {
     // Spawn animals 2 seconds after user takes control
     setTimeout(() => {
-      spawnTunnelAnimals(path, scene).forEach(a => animals.push(a))
+      spawnTunnelAnimals(path, scene, tunnelRadius).forEach(a => animals.push(a))
     }, 3000)
 
     runFlightSequence(refs, canvas, confettiOverlay, () => {

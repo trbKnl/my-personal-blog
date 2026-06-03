@@ -1,6 +1,7 @@
 const express = require("express")
 var compression = require("compression")
 const fs = require("fs")
+const { networkInterfaces } = require("os")
 
 /* Start server here */
 const app = express();
@@ -29,7 +30,10 @@ app.get('/', (req, res) => {
 
 
 const PORT = 8080
-app.listen(PORT, () => { 
-    console.log(`Server started on http://localhost:${PORT}`)
+const lanIp = Object.values(networkInterfaces()).flat().find(n => n.family === 'IPv4' && !n.internal)?.address
+
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Local:   http://localhost:${PORT}`)
+    if (lanIp) console.log(`Network: http://${lanIp}:${PORT}`)
 });
 
