@@ -29,7 +29,8 @@ function renderPost(file) {
   const html = ejs.render(TEMPLATE, {
     title: data.title,
     description: data.description,
-    content: md.render(content)
+    content: md.render(content),
+    game: !!data.game
   })
   const out = path.join(PROJECTS_DIR, path.basename(file, path.extname(file)) + '.html')
   fs.writeFileSync(out, html, 'utf8')
@@ -61,8 +62,8 @@ function buildMetadata() {
   const items = sorted.slice(0, 10).map(([file, data]) => `
     <item>
       <title>${escapeXml(data.title)}</title>
-      <link>https://niekdeschipper.com/projects/${file}</link>
-      <guid isPermaLink="true">https://niekdeschipper.com/projects/${file}</guid>
+      <link>https://niekdeschipper.nl/projects/${file}</link>
+      <guid isPermaLink="true">https://niekdeschipper.nl/projects/${file}</guid>
       <description>${escapeXml(data.description)}</description>
       <pubDate>${new Date(data.date).toUTCString()}</pubDate>
     </item>`).join('')
@@ -71,9 +72,9 @@ function buildMetadata() {
     `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
-    <title>niekdeschipper.com</title>
-    <link>https://niekdeschipper.com/rss/rss.xml</link>
-    <description>RSS feed of niekdeschipper.com</description>
+    <title>niekdeschipper.nl</title>
+    <link>https://niekdeschipper.nl/rss/rss.xml</link>
+    <description>RSS feed of niekdeschipper.nl</description>
     <language>en</language>${items}
   </channel>
 </rss>`)
