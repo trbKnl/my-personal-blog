@@ -5,11 +5,13 @@ import {
 } from './state.js'
 import { spawnAndWalk } from './movement.js'
 import { spawnConfetti } from './confetti.js'
+import { startTunnelSequence } from './tunnel.js'
 
 // --- State ---
 const state = createState()
 const animals = []      // { id, element, tweens: { walk, waddle } }
 let detonator = null    // { element, tweens: { walk, waddle } }
+let portal = null
 let nextId = 0
 
 // --- Overlay ---
@@ -21,7 +23,12 @@ document.body.appendChild(overlay)
 const house = document.createElement('img')
 house.src = '/game/assets/house.svg'
 house.id = 'game-house'
+gsap.set(house, { y: 120 })
 overlay.appendChild(house)
+
+house.addEventListener('load', () => {
+  gsap.to(house, { y: 0, duration: 0.6, ease: 'back.out(1.4)' })
+})
 
 house.addEventListener('click', handleHouseClick)
 
@@ -35,6 +42,41 @@ toggleBtn.addEventListener('click', () => {
   toggleBtn.classList.toggle('game-active')
 })
 
+// --- Portal ---
+function spawnPortalSprite() {
+  const el = document.createElement('img')
+  el.src = '/game/assets/portal.svg'
+  el.id = 'game-portal'
+  el.className = 'game-sprite'
+  overlay.appendChild(el)
+
+  const houseRect = house.getBoundingClientRect()
+  const startX = houseRect.right - 125
+  const startY = houseRect.top + houseRect.height * 0.3
+
+  const tweens = spawnAndWalk(el, overlay, startX, startY)
+  portal = { element: el, tweens }
+
+  el.addEventListener('click', handlePortalClick)
+}
+
+function handlePortalClick() {
+  clearPortalIfPresent()
+  clearDetonatorIfPresent()
+  massPopAnimals()
+  startTunnelSequence(() => {
+    resetRound(state)
+  })
+}
+
+function clearPortalIfPresent() {
+  if (!portal) return
+  if (portal.tweens.walk) portal.tweens.walk.kill()
+  if (portal.tweens.waddle) portal.tweens.waddle.kill()
+  portal.element.remove()
+  portal = null
+}
+
 // --- House click ---
 function handleHouseClick() {
   if (!canSpawn(state)) return
@@ -45,6 +87,7 @@ function handleHouseClick() {
   if (shouldSpawnDetonator) {
     spawnDetonatorSprite()
     onDetonatorSpawn(state)
+    spawnPortalSprite()
   } else {
     spawnAnimalSprite()
   }
@@ -88,6 +131,7 @@ function handleAnimalClick(id) {
 
   if (isRoundOver(state)) {
     clearDetonatorIfPresent()
+    clearPortalIfPresent()
     resetRound(state)
   }
 }
@@ -114,6 +158,7 @@ function handleDetonatorClick() {
   if (!detonator) return
   massPopAnimals()
   popDetonatorElement()
+  clearPortalIfPresent()
   onDetonatorPop(state)
   resetRound(state)
 }
