@@ -6,6 +6,13 @@
     <description>RSS feed of niekdeschipper.nl</description>
     <language>en</language>
     <item>
+      <title>Word Embedding Game</title>
+      <link>https://niekdeschipper.nl/projects/word-embedding-game.html</link>
+      <guid isPermaLink="true">https://niekdeschipper.nl/projects/word-embedding-game.html</guid>
+      <description>Sort words along a semantic spectrum — a game powered by word2vec embeddings</description>
+      <pubDate>Thu, 11 Jun 2026 00:00:00 GMT</pubDate>
+    </item>
+    <item>
       <title>Blogs are dead</title>
       <link>https://niekdeschipper.nl/projects/house-game.html</link>
       <guid isPermaLink="true">https://niekdeschipper.nl/projects/house-game.html</guid>
@@ -67,13 +74,6 @@
       <guid isPermaLink="true">https://niekdeschipper.nl/projects/learning_elixir.html</guid>
       <description>How and why you should Learn Elixir</description>
       <pubDate>Mon, 20 Feb 2023 00:00:00 GMT</pubDate>
-    </item>
-    <item>
-      <title>Local testing setup for Cloud-init</title>
-      <link>https://niekdeschipper.nl/projects/cloud-init.html</link>
-      <guid isPermaLink="true">https://niekdeschipper.nl/projects/cloud-init.html</guid>
-      <description>Test your Cloud-init configuration before deploying to the cloud</description>
-      <pubDate>Thu, 26 Jan 2023 00:00:00 GMT</pubDate>
     </item>
   </channel>
 </rss>

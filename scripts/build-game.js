@@ -2,10 +2,10 @@ const esbuild = require('esbuild')
 const path = require('path')
 
 esbuild.build({
-  entryPoints: [path.join(__dirname, '../resources/game/game.js')],
+  entryPoints: [path.join(__dirname, '../resources/house-game/game.js')],
   bundle: true,
   minify: true,
-  outfile: path.join(__dirname, '../resources/game/game.bundle.js'),
+  outfile: path.join(__dirname, '../resources/house-game/game.bundle.js'),
   format: 'iife',
   platform: 'browser',
 }).then(() => {

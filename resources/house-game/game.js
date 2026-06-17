@@ -21,7 +21,7 @@ document.body.appendChild(overlay)
 
 // --- House ---
 const house = document.createElement('img')
-house.src = '/game/assets/house.svg'
+house.src = '/house-game/assets/house.svg'
 house.id = 'game-house'
 gsap.set(house, { y: 120 })
 overlay.appendChild(house)
@@ -45,7 +45,7 @@ toggleBtn.addEventListener('click', () => {
 // --- Portal ---
 function spawnPortalSprite() {
   const el = document.createElement('img')
-  el.src = '/game/assets/portal.svg'
+  el.src = '/house-game/assets/portal.svg'
   el.id = 'game-portal'
   el.className = 'game-sprite'
   overlay.appendChild(el)
@@ -96,7 +96,7 @@ function handleHouseClick() {
 // --- Spawn animal ---
 function spawnAnimalSprite() {
   const el = document.createElement('img')
-  el.src = '/game/assets/animal.svg'
+  el.src = '/house-game/assets/animal.svg'
   el.className = 'game-sprite'
   overlay.appendChild(el)
 
@@ -139,7 +139,7 @@ function handleAnimalClick(id) {
 // --- Detonator ---
 function spawnDetonatorSprite() {
   const el = document.createElement('img')
-  el.src = '/game/assets/detonator.svg'
+  el.src = '/house-game/assets/detonator.svg'
   el.id = 'game-detonator'
   el.className = 'game-sprite'
   overlay.appendChild(el)

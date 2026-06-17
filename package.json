@@ -6,8 +6,9 @@
   "scripts": {
     "start": "node app.js",
     "dev": "concurrently \"node app.js\" \"node ./scripts/watcher.js\"",
-    "build": "node ./scripts/build.js && node ./scripts/build-game.js",
-    "build:game": "node ./scripts/build-game.js"
+    "build": "node ./scripts/build.js && node ./scripts/build-game.js && node ./scripts/build-word-game.js",
+    "build:game": "node ./scripts/build-game.js",
+    "build:word-game": "node ./scripts/build-word-game.js"
   },
   "keywords": [],
   "author": "",

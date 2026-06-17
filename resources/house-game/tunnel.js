@@ -194,7 +194,7 @@ function spawnConfetti3D(position, scene, forwardDir) {
 
 function spawnTunnelAnimals(path, scene, tunnelRadius) {
   const loader  = new THREE.TextureLoader()
-  const texNorm = loader.load('/game/assets/animal.svg')
+  const texNorm = loader.load('/house-game/assets/animal.svg')
   const texFlip = texNorm.clone()
   texFlip.repeat.set(-1, 1)
   texFlip.offset.set(1, 0)
@@ -312,6 +312,8 @@ function runFlightSequence(refs, canvas, confettiOverlay, onDone) {
   const craftTarget = { x: 0, y: -0.5 }
   const keyboard    = setupKeyboard(craftTarget)
   const touch       = setupTouch(canvas, craftTarget)
+  let prevCraftX    = craftTarget.x
+  let currentBank   = 0
 
   let startTime = null
   let animId    = null
@@ -343,6 +345,14 @@ function runFlightSequence(refs, canvas, confettiOverlay, onDone) {
       .addScaledVector(up, craftTarget.y)
 
     craft.lookAt(craft.position.clone().addScaledVector(forward, 10))
+
+    // Bank into turns: smoothly lerp bank toward velocity-based target
+    const MAX_BANK   = 0.5
+    const dx         = craftTarget.x - prevCraftX
+    const targetBank = -Math.sign(dx) * Math.min(Math.abs(dx) / 0.05, 1) * MAX_BANK
+    currentBank      = currentBank + (targetBank - currentBank) * 0.1
+    craft.rotateZ(currentBank)
+    prevCraftX = craftTarget.x
 
     // animals is a live array; it starts empty and gets populated after a delay
     animals.forEach(animal => {
