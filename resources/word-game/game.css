@@ -11,6 +11,8 @@
 #word-game-container {
   font-family: system-ui, sans-serif;
   max-width: 700px;
+  width: 100%;
+  box-sizing: border-box;
   margin: 2rem auto;
   padding: 0 1rem;
   user-select: none;
@@ -174,7 +176,7 @@
   border: 2px solid #000;
   background: #fff;
   padding: 10px 12px;
-  font-size: 0.85rem;
+  font-size: clamp(0.55rem, 2.5vw, 0.85rem);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -182,6 +184,8 @@
   white-space: nowrap;
   touch-action: none;
   position: relative;
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 .word-card:active { cursor: grabbing; }
@@ -337,8 +341,10 @@
 /* ── Responsive ─────────────────────────────────────────────────────── */
 @media (max-width: 480px) {
   .word-card {
-    padding: 8px 6px;
-    font-size: 0.75rem;
+    padding: clamp(4px, 1.5vw, 8px) clamp(3px, 1.2vw, 6px);
+  }
+  #wg-cards {
+    gap: clamp(3px, 1vw, 8px);
   }
   #wg-modal-list {
     grid-template-columns: 1fr;
