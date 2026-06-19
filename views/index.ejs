@@ -6,7 +6,7 @@
 	<title>Niek de Schipper</title>
     <link rel="stylesheet" href="bootstrap.min.css"/>
     <link rel="icon" type="image/png" href="/siteicon.png">
-    <link rel="preload" as="image" href="/icon2.png">
+    <link rel="preload" as="image" href="/icon2.webp" type="image/webp">
     <link rel="stylesheet" href="/house-game/game.css">
 </head>
 <body>
@@ -19,7 +19,10 @@
     </div>
     <div class="row align-items-center">
       <div class="col-md-4">
-          <img width="250px" src="icon2.png" align="left" fetchpriority="high">
+          <picture>
+            <source srcset="icon2.webp" type="image/webp">
+            <img width="250px" src="icon2.png" align="left" fetchpriority="high">
+          </picture>
       </div>
       <div class="col-md-4">
           <p> 

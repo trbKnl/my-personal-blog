@@ -2,7 +2,7 @@
   "word-embedding-game.html": {
     "title": "Word Embedding Game",
     "date": "2026-06-11T00:00:00.000Z",
-    "description": "Sort words along a semantic spectrum — a game powered by word2vec embeddings"
+    "description": "Sort words along a semantic spectrum determined by word embeddings"
   },
   "house-game.html": {
     "title": "Blogs are dead",

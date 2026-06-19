@@ -14,9 +14,10 @@ app.set('view engine', 'ejs')
 
 // resources directory for images and such
 // bootstrap css file
-app.use(express.static(__dirname + '/resources'));
-app.use("/projects", express.static(__dirname + '/projects'));
-app.use("/rss", express.static(__dirname + '/rss'));
+const staticOpts = { maxAge: '7d' };
+app.use(express.static(__dirname + '/resources', staticOpts));
+app.use("/projects", express.static(__dirname + '/projects', staticOpts));
+app.use("/rss", express.static(__dirname + '/rss', staticOpts));
 
 // read in the metadata file to display the blog posts
 var metadata = JSON.parse(fs.readFileSync('./blogmetadata.json', 'utf8'));
