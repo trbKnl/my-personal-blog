@@ -4,7 +4,7 @@ const path = require('path')
 
 // ─── Step 1: CSV → levels.json ───────────────────────────────────────────────
 
-const CSV_PATH    = '/home/turbo/pythontest/word2vecgame_embeddings/level_candidates.csv'
+const CSV_PATH    = path.join(__dirname, '../resources/word-game/level_candidates.csv')
 const OUTPUT_DIR  = path.join(__dirname, '../resources/word-game')
 const LEVELS_PATH = path.join(OUTPUT_DIR, 'levels.json')
 
