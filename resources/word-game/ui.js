@@ -25,9 +25,8 @@ export function hideLoading(container) {
 // onSubmit(playerWords) — called when player clicks Submit
 // onNext()             — called when player clicks Next Level
 // onCogClick()         — called when player clicks the cog
-export function renderBoard(container, level, { onSubmit, onCogClick, onPrev, onNext }) {
-  const runLabel  = `Level ${level.run}/100`
-  const conceptLabel = `${level.pole_a.toUpperCase()} ↔ ${level.pole_b.toUpperCase()}`
+export function renderBoard(container, level, { onSubmit, onCogClick, onPrev, onNext, levelIndex, levelTotal, conceptIndex, conceptTotal }) {
+  const runLabel     = `Level ${levelIndex}/${levelTotal}`
 
   // Shuffle words for display (don't reveal the answer order)
   const shuffled = shuffleArray(level.words.map(w => w.word))
@@ -43,6 +42,7 @@ export function renderBoard(container, level, { onSubmit, onCogClick, onPrev, on
     </div>
 
     <div id="wg-axis-area">
+      <div id="wg-concept-counter">${conceptIndex}/${conceptTotal}</div>
       <div id="wg-poles">
         <span class="wg-pole">${level.pole_a.toUpperCase()}</span>
         <span class="wg-pole">${level.pole_b.toUpperCase()}</span>

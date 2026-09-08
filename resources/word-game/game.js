@@ -39,11 +39,19 @@ function playLevel(level) {
   if (!container) return
   currentLevel = level
 
+  const idx = allLevels.indexOf(level)
+  const key = `${level.pole_a},${level.pole_b}`
+  const runs = conceptMap.get(key)
+
   renderBoard(container, level, {
+    levelIndex: idx + 1,
+    levelTotal: allLevels.length,
+    conceptIndex: runs.indexOf(level) + 1,
+    conceptTotal: runs.length,
     onSubmit(playerWords) {
       const result = scorePairs(playerWords, level.words)
       showResults(container, result, level, playerWords).then(() => {
-        playLevel(nextLevel(level))
+        playLevel(allLevels[(idx + 1) % allLevels.length])
       })
     },
     onCogClick() {
@@ -51,24 +59,9 @@ function playLevel(level) {
         playLevel(pickByConcept(conceptMap, key))
       })
     },
-    onPrev() { playLevel(prevLevel(level)) },
-    onNext() { playLevel(nextLevel(level)) },
+    onPrev() { playLevel(allLevels[(idx - 1 + allLevels.length) % allLevels.length]) },
+    onNext() { playLevel(allLevels[(idx + 1) % allLevels.length]) },
   })
-}
-
-// Advance to the next run of the same concept pair, wrapping at 100
-function nextLevel(level) {
-  const key  = `${level.pole_a},${level.pole_b}`
-  const runs = conceptMap.get(key)
-  const idx  = runs.findIndex(l => l.run === level.run)
-  return runs[(idx + 1) % runs.length]
-}
-
-function prevLevel(level) {
-  const key  = `${level.pole_a},${level.pole_b}`
-  const runs = conceptMap.get(key)
-  const idx  = runs.findIndex(l => l.run === level.run)
-  return runs[(idx - 1 + runs.length) % runs.length]
 }
 
 init()

@@ -78,6 +78,13 @@
   letter-spacing: 0.08em;
 }
 
+#wg-concept-counter {
+  text-align: center;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.25rem;
+}
+
 #wg-level-nav {
   display: flex;
   align-items: center;
