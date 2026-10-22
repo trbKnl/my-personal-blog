@@ -196,7 +196,39 @@ if (require.main === module) {
     console.error(err)
     process.exit(1)
   }
-  require('esbuild').build(esbuildOptions)
+  if (process.argv.includes('--dev')) dev()
+  else require('esbuild').build(esbuildOptions)
     .then(() => console.log('Built: game bundles'))
     .catch(() => process.exit(1))
+}
+
+// Serve dist/, rebuild on change, reload open tabs
+async function dev() {
+  const serve = require('./serve')
+  const chokidar = require('chokidar')
+  serve.start()
+  console.log('Local: http://localhost:8080')
+
+  // esbuild watches the game sources itself
+  const ctx = await require('esbuild').context({
+    ...esbuildOptions,
+    plugins: [{ name: 'reload', setup: b => b.onEnd(r => { if (!r.errors.length) serve.reload() }) }]
+  })
+  await ctx.watch()
+
+  let timer
+  chokidar.watch([BLOGS_DIR, VIEWS_DIR, RESOURCES_DIR], {
+    ignoreInitial: true,
+    ignored: p => /(house-game|word-game)\/[^/]+\.m?js$/.test(p)
+  }).on('all', () => {
+    clearTimeout(timer)
+    timer = setTimeout(() => {
+      try {
+        buildSite()
+        serve.reload()
+      } catch (err) {
+        console.error(err.message)
+      }
+    }, 100)
+  })
 }
