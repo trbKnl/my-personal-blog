@@ -2,27 +2,18 @@
   "name": "personal website",
   "version": "6.6.6",
   "description": "",
-  "main": "index.js",
+  "main": "scripts/build.js",
   "scripts": {
-    "test": "node --test",
-    "start": "node app.js",
-    "dev": "concurrently \"node app.js\" \"node ./scripts/watcher.js\"",
-    "build": "node ./scripts/build.js && node ./scripts/build-game.js && node ./scripts/build-word-game.js && node ./scripts/build-explainer.js",
-    "build:game": "node ./scripts/build-game.js",
-    "build:word-game": "node ./scripts/build-word-game.js",
-    "build:explainer": "node ./scripts/build-explainer.js"
+    "build": "node scripts/build.js",
+    "dev": "node scripts/build.js --dev",
+    "test": "node --test"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@popperjs/core": "^2.11.8",
-    "bootstrap": "^5.0.0-beta2",
     "chokidar": "^4.0.1",
-    "compression": "^1.7.4",
-    "concurrently": "^9.0.1",
     "ejs": "^3.1.6",
-    "express": "^4.17.1",
     "gray-matter": "^4.0.2",
     "highlight.js": "^11.3.1",
     "markdown-it": "^14.1.0"
@@ -30,7 +21,6 @@
   "devDependencies": {
     "esbuild": "^0.28.0",
     "gsap": "^3.15.0",
-    "nodemon": "^2.0.7",
     "three": "^0.184.0"
   }
 }

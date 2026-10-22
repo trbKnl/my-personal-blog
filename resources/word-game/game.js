@@ -8,7 +8,7 @@ import {
   renderBoard, showResults, showConceptModal,
 } from './ui.js'
 
-const LEVELS_URL = '/word-game/levels.json'
+const LEVELS_URL = (process.env.BASE_PATH || '') + '/word-game/levels.json'
 
 let allLevels    = []
 let conceptMap   = new Map()

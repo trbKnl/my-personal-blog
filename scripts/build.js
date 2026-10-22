@@ -17,21 +17,30 @@ const md = require('markdown-it')({
 
 const ROOT = path.join(__dirname, '..')
 const BLOGS_DIR = path.join(ROOT, 'blogs')
-const PROJECTS_DIR = path.join(ROOT, 'projects')
-const RSS_DIR = path.join(ROOT, 'rss')
-const TEMPLATE = fs.readFileSync(path.join(ROOT, 'views/blog.ejs'), 'utf-8')
+const VIEWS_DIR = path.join(ROOT, 'views')
+const RESOURCES_DIR = path.join(ROOT, 'resources')
+const DIST = path.join(ROOT, 'dist')
+const BASE_PATH = process.env.BASE_PATH || ''
+const SITE_URL = process.env.SITE_URL || 'http://localhost:8080'
 
-function renderPost(file) {
-  const { data, content } = matter(fs.readFileSync(path.join(BLOGS_DIR, file)))
-  const html = ejs.render(TEMPLATE, {
-    title: data.title,
-    description: data.description,
-    content: md.render(content),
-    game: !!data.game
-  })
-  const out = path.join(PROJECTS_DIR, path.basename(file, path.extname(file)) + '.html')
-  fs.writeFileSync(out, html, 'utf8')
-  console.log('Built:', out)
+const esbuildOptions = {
+  entryPoints: {
+    'house-game/game.bundle': path.join(RESOURCES_DIR, 'house-game/game.js'),
+    'word-game/game.bundle': path.join(RESOURCES_DIR, 'word-game/game.js'),
+    'word-game-explainer.bundle': path.join(RESOURCES_DIR, 'word-game/explainer.js'),
+  },
+  outdir: DIST,
+  bundle: true,
+  minify: true,
+  format: 'iife',
+  platform: 'browser',
+  define: { 'process.env.BASE_PATH': JSON.stringify(BASE_PATH) },
+}
+
+function write(rel, content) {
+  const out = path.join(DIST, rel)
+  fs.mkdirSync(path.dirname(out), { recursive: true })
+  fs.writeFileSync(out, content, 'utf8')
 }
 
 function escapeXml(str) {
@@ -42,41 +51,60 @@ function escapeXml(str) {
     .replace(/"/g, '&quot;')
 }
 
-function buildMetadata() {
-  const files = fs.readdirSync(BLOGS_DIR).filter(f => f.endsWith('.md'))
-  const meta = {}
-  for (const file of files) {
-    const { data } = matter(fs.readFileSync(path.join(BLOGS_DIR, file)))
-    meta[path.basename(file, '.md') + '.html'] = data
-  }
-
-  const sorted = Object.entries(meta).sort(([, a], [, b]) =>
-    new Date(b.date) - new Date(a.date)
-  )
-
-  fs.writeFileSync(path.join(ROOT, 'blogmetadata.json'), JSON.stringify(Object.fromEntries(sorted), null, 2))
-
-  const items = sorted.slice(0, 10).map(([file, data]) => `
+function rss(posts) {
+  const items = posts.slice(0, 10).map(([file, data]) => `
     <item>
       <title>${escapeXml(data.title)}</title>
-      <link>https://niekdeschipper.nl/projects/${file}</link>
-      <guid isPermaLink="true">https://niekdeschipper.nl/projects/${file}</guid>
+      <link>${SITE_URL}/projects/${file}</link>
+      <guid isPermaLink="true">${SITE_URL}/projects/${file}</guid>
       <description>${escapeXml(data.description)}</description>
       <pubDate>${new Date(data.date).toUTCString()}</pubDate>
     </item>`).join('')
 
-  fs.writeFileSync(path.join(RSS_DIR, 'rss.xml'),
-    `<?xml version="1.0" encoding="UTF-8"?>
+  return `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
     <title>niekdeschipper.nl</title>
-    <link>https://niekdeschipper.nl/rss/rss.xml</link>
+    <link>${SITE_URL}/</link>
     <description>RSS feed of niekdeschipper.nl</description>
     <language>en</language>${items}
   </channel>
-</rss>`)
+</rss>`
+}
 
-  console.log('Built: blogmetadata.json + rss.xml')
+// Everything except wiping dist/ and bundling the games
+function buildSite() {
+  fs.cpSync(RESOURCES_DIR, DIST, {
+    recursive: true,
+    filter: src => shouldCopy(path.relative(RESOURCES_DIR, src).split(path.sep).join('/'))
+  })
+
+  const csv = fs.readFileSync(path.join(RESOURCES_DIR, 'word-game/level_candidates.csv'), 'utf8')
+  write('word-game/levels.json', JSON.stringify(buildLevels(csv)))
+
+  const blogTemplate = fs.readFileSync(path.join(VIEWS_DIR, 'blog.ejs'), 'utf8')
+  const posts = []
+  for (const file of fs.readdirSync(BLOGS_DIR).filter(f => f.endsWith('.md'))) {
+    const { data, content } = matter(fs.readFileSync(path.join(BLOGS_DIR, file)))
+    const name = path.basename(file, '.md') + '.html'
+    write(`projects/${name}`, withBase(ejs.render(blogTemplate, {
+      title: data.title,
+      description: data.description,
+      content: md.render(content),
+      game: !!data.game,
+      siteUrl: SITE_URL
+    }), BASE_PATH))
+    posts.push([name, data])
+  }
+  posts.sort(([, a], [, b]) => new Date(b.date) - new Date(a.date))
+
+  const indexTemplate = fs.readFileSync(path.join(VIEWS_DIR, 'index.ejs'), 'utf8')
+  write('index.html', withBase(ejs.render(indexTemplate, {
+    metadata: Object.fromEntries(posts),
+    siteUrl: SITE_URL
+  }), BASE_PATH))
+  write('rss/rss.xml', rss(posts))
+  console.log(`Built: ${posts.length} posts, index.html, rss.xml`)
 }
 
 // Prefix root-absolute src/href (not protocol-relative //) with the base path
@@ -158,16 +186,17 @@ function shouldCopy(relPath) {
   return !/^(house-game|word-game)\/[^/]+\.m?js$/.test(relPath)
 }
 
-module.exports = { withBase, buildLevels, shouldCopy }
+module.exports = { withBase, buildLevels, shouldCopy, buildSite, esbuildOptions }
 
 if (require.main === module) {
-  fs.mkdirSync(PROJECTS_DIR, { recursive: true })
-  fs.mkdirSync(RSS_DIR, { recursive: true })
-  const args = process.argv.slice(2)
-  if (args.length > 0) {
-    renderPost(path.basename(args[0]))
-  } else {
-    fs.readdirSync(BLOGS_DIR).filter(f => f.endsWith('.md')).forEach(renderPost)
-    buildMetadata()
+  fs.rmSync(DIST, { recursive: true, force: true })
+  try {
+    buildSite()
+  } catch (err) {
+    console.error(err)
+    process.exit(1)
   }
+  require('esbuild').build(esbuildOptions)
+    .then(() => console.log('Built: game bundles'))
+    .catch(() => process.exit(1))
 }
