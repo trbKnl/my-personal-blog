@@ -2,49 +2,55 @@
 
 ## Project overview
 
-Personal website and minimal static site generator. Node.js only (no Python dependency).
+Personal website and minimal static site generator. Node.js only (no Python dependency). Hosted on GitHub Pages; there is no server.
 
 ## Key structure
 
 ```
 blogs/          # Source markdown files (write here)
-projects/       # Generated static HTML (do not edit manually)
 views/          # EJS templates: index.ejs (homepage), blog.ejs (posts)
-resources/      # Static assets served at root: CSS, images, game/
+resources/      # Static assets copied to the site root: CSS, images, games
+  house-game/   # Three.js/GSAP overlay game (sources bundled by esbuild)
+  word-game/    # Word embedding game + explainer (sources bundled by esbuild)
 scripts/
-  build.js      # Builds all posts + metadata + RSS (or single file if arg given)
-  watcher.js    # Watches blogs/ and triggers build.js on changes
-app.js          # Express server
-blogmetadata.json  # Generated — do not edit manually
-rss/rss.xml        # Generated — do not edit manually
+  build.js      # Builds the whole site into dist/; --dev adds serve + watch + live reload
+  serve.js      # Local static server for dist/ with /__reload (SSE)
+.github/workflows/deploy.yml  # Push to main → test, build, deploy to Pages
+dist/           # Generated — gitignored, never edit
 ```
 
 ## Build system
 
-Single script handles everything:
-
 ```bash
-node ./scripts/build.js           # Build all posts + metadata + RSS
-node ./scripts/build.js blogs/x.md  # Rebuild one post only (fast)
+node scripts/build.js        # Full build into dist/
+node scripts/build.js --dev  # Build, serve :8080, watch, live reload
 ```
 
-- Uses `gray-matter` for YAML front matter parsing
-- Uses `markdown-it` + `highlight.js` for markdown → HTML
-- Uses `ejs` to render `views/blog.ejs` template
-- Generates `blogmetadata.json` sorted by date descending
-- Generates RSS feed for 10 most recent posts
+- Uses `gray-matter` for YAML front matter, `markdown-it` + `highlight.js` for markdown → HTML, `ejs` for templates
+- Posts → `dist/projects/<name>.html`, homepage → `dist/index.html`, RSS (10 most recent) → `dist/rss/rss.xml`
+- `resources/word-game/level_candidates.csv` → `dist/word-game/levels.json`
+- esbuild bundles `house-game/game.js`, `word-game/game.js`, `word-game/explainer.js`
+- Game sources, tests and the CSV are not copied to `dist/`
+
+## Base path
+
+The site may live under a subpath (`/my-personal-blog`) or at a domain root. `BASE_PATH` and `SITE_URL` env vars (set in CI from `actions/configure-pages`) control this:
+
+- In posts and templates, write root-absolute paths (`/x.png`); `withBase` rewrites `src="/…"` / `href="/…"` at build time
+- In game JS, prefix asset URLs with `(process.env.BASE_PATH || '')`; esbuild substitutes it
+- Inline scripts in posts can't be rewritten: use paths relative to `/projects/` (e.g. `../worker.js`)
 
 ## Adding a blog post
 
 1. Create `blogs/my-post.md` with front matter (`title`, `date`, `description`)
-2. Run `npm run build` (or let the watcher do it in dev mode)
+2. Preview with `npm run dev`, release by pushing to `main`
 
 ## Game overlay
 
-An interactive game (`resources/game/`) runs as a fixed overlay on all pages (z-index 9000+). It's included via `views/blog.ejs` and `views/index.ejs`. Asset paths in `game/game.js` and `game/sword.js` must use absolute paths (`/game/assets/...`) to work correctly across all page routes.
+The house game (`resources/house-game/`) runs as a fixed overlay (z-index 9000+), included via `views/index.ejs`.
 
 ## npm scripts
 
-- `npm run dev` — server + watcher (concurrently)
-- `npm run build` — full build
-- `npm start` — server only
+- `npm run dev` — build + serve + watch + live reload
+- `npm run build` — full build into `dist/`
+- `npm test` — `node --test`
