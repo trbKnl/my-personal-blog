@@ -38,4 +38,6 @@ Commit and push to `main`. The GitHub Actions workflow runs the tests, builds `d
 
 One-time setup: repo Settings → Pages → Source: **GitHub Actions**.
 
-The site is served at `https://trbknl.github.io/my-personal-blog/` until a custom domain is set in Settings → Pages. The base path comes from the Pages configuration, so switching to a custom domain needs no code change.
+The site is served at `https://trbknl.github.io/my-personal-blog/` until a custom domain is set in Settings → Pages. The base path comes from the Pages configuration, so switching to a custom domain needs no code change, but the base path is baked in at build time: right after setting the domain, re-run the workflow (Actions → Deploy to GitHub Pages → Run workflow), otherwise the live pages keep pointing at `/my-personal-blog/…` and assets 404.
+
+Paths are rewritten only in double-quoted `src="/…"` and `href="/…"` attributes. Inline scripts in posts must use paths relative to `/projects/` (e.g. `../worker.js`).

@@ -46,6 +46,14 @@ test('path traversal is refused', async () => {
   assert.doesNotMatch(await res.text(), /"name"/)
 })
 
+test('malformed URLs get 400 and the server keeps running', async () => {
+  for (const url of ['/%E0', '/a%00b']) {
+    const res = await fetch(`${base}${url}`)
+    assert.equal(res.status, 400, url)
+  }
+  assert.equal((await fetch(`${base}/__test.html`)).status, 200)
+})
+
 test('reload() reaches open clients and forgets closed ones', async () => {
   const req = http.get(`${base}/__reload`)
   const res = await new Promise(resolve => req.once('response', resolve))

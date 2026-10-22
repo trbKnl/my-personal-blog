@@ -37,7 +37,13 @@ function start(port = 8080) {
       req.on('close', () => clients.delete(res))
       return
     }
-    let file = path.join(DIST_DIR, decodeURIComponent(new URL(req.url, 'http://x').pathname))
+    let file
+    try {
+      file = path.join(DIST_DIR, decodeURIComponent(new URL(req.url, 'http://x').pathname))
+      if (file.includes('\0')) throw new Error('null byte')
+    } catch (_) {
+      return res.writeHead(400).end('Bad request')
+    }
     if (!file.startsWith(DIST_DIR)) return res.writeHead(403).end()
     if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, 'index.html')
     fs.readFile(file, (err, data) => {
