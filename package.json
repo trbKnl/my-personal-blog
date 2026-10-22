@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "test": "node --test",
     "start": "node app.js",
     "dev": "concurrently \"node app.js\" \"node ./scripts/watcher.js\"",
     "build": "node ./scripts/build.js && node ./scripts/build-game.js && node ./scripts/build-word-game.js && node ./scripts/build-explainer.js",
