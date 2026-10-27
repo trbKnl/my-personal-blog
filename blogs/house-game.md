@@ -12,5 +12,5 @@ Blogs are dead (almost dead). People (myself included) used to write about the s
 
 So I made a fun little "game" on the main page instead. Click on the house a bunch of times. It's completely vibed, I haven't learned ANYTHING from making it, but I don't mind as much. It's more art than anything, really. Sure, I could've actually learned Three.js and GSAP doing it properly... but what's the point?
 
-<link rel="stylesheet" href="/game/game.css">
-<script defer src="/game/game.bundle.js"></script>
+<link rel="stylesheet" href="/house-game/game.css">
+<script defer src="/house-game/game.bundle.js"></script>

@@ -336,7 +336,7 @@ const video = document.querySelector("#videoInput")
 const ncompDisplay = document.querySelector("#ncompDisplay")
 ncompDisplay.innerHTML = parseInt(ncompSlider.value) + 1
 
-const worker = new Worker("/worker.js")
+const worker = new Worker("../worker.js")
 
 let canvasFrame = document.getElementById("canvasFrame"); // canvasFrame is the id of <canvas>
 let context = canvasFrame.getContext("2d");

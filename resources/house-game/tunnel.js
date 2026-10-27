@@ -194,7 +194,7 @@ function spawnConfetti3D(position, scene, forwardDir) {
 
 function spawnTunnelAnimals(path, scene, tunnelRadius) {
   const loader  = new THREE.TextureLoader()
-  const texNorm = loader.load('/house-game/assets/animal.svg')
+  const texNorm = loader.load((process.env.BASE_PATH || '') + '/house-game/assets/animal.svg')
   const texFlip = texNorm.clone()
   texFlip.repeat.set(-1, 1)
   texFlip.offset.set(1, 0)
