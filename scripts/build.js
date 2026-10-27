@@ -22,6 +22,7 @@ const RESOURCES_DIR = path.join(ROOT, 'resources')
 const DIST = path.join(ROOT, 'dist')
 const BASE_PATH = process.env.BASE_PATH || ''
 const SITE_URL = process.env.SITE_URL || 'http://localhost:8080'
+const PORT = Number(process.env.PORT) || 8080
 
 const esbuildOptions = {
   entryPoints: {
@@ -188,7 +189,8 @@ function shouldCopy(relPath) {
 
 module.exports = { withBase, buildLevels, shouldCopy, buildSite, esbuildOptions }
 
-if (require.main === module) {
+// Wipe dist/ and build pages; bundles are left to the caller
+function cleanBuild() {
   fs.rmSync(DIST, { recursive: true, force: true })
   try {
     buildSite()
@@ -196,18 +198,35 @@ if (require.main === module) {
     console.error(err)
     process.exit(1)
   }
+}
+
+if (require.main === module) {
   if (process.argv.includes('--dev')) dev()
-  else require('esbuild').build(esbuildOptions)
-    .then(() => console.log('Built: game bundles'))
-    .catch(() => process.exit(1))
+  else {
+    cleanBuild()
+    require('esbuild').build(esbuildOptions)
+      .then(() => console.log('Built: game bundles'))
+      .catch(() => process.exit(1))
+  }
 }
 
 // Serve dist/, rebuild on change, reload open tabs
 async function dev() {
   const serve = require('./serve')
   const chokidar = require('chokidar')
-  serve.start()
-  console.log('Local: http://localhost:8080')
+
+  // Claim the port before touching dist/, so a second instance can't wipe the first one's output
+  const server = serve.start(PORT)
+  try {
+    await new Promise((resolve, reject) => server.once('listening', resolve).once('error', reject))
+  } catch (err) {
+    console.error(err.code === 'EADDRINUSE'
+      ? `Port ${PORT} is already in use — is npm run dev already running?`
+      : err.message)
+    process.exit(1)
+  }
+  cleanBuild()
+  console.log(`Local: http://localhost:${PORT}`)
 
   // esbuild watches the game sources itself
   const ctx = await require('esbuild').context({
